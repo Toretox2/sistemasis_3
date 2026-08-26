@@ -10,6 +10,20 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+  if (typeof Html5QrcodeScanner === 'undefined') {
+    console.error('No se pudo cargar la librería html5-qrcode.');
+    if (scannerStatus) {
+      scannerStatus.textContent = 'No se pudo cargar el lector QR';
+      scannerStatus.style.background = 'rgba(239, 68, 68, 0.12)';
+      scannerStatus.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+    }
+    return;
+  }
+
+  if (typeof Swal === 'undefined') {
+    console.warn('SweetAlert2 no está disponible; se usarán mensajes básicos.');
+  }
+
   const localDateTime = () => new Date();
 
   const parseTimeToDate = (timeValue) => {
@@ -208,16 +222,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const scanner = new Html5QrcodeScanner(
-    'qr-reader',
-    {
-      fps: 10,
-      qrbox: { width: 260, height: 260 },
-      rememberLastUsedCamera: true,
-      showTorchButtonIfSupported: true,
-      aspectRatio: 1,
-    },
-    false,
-  );
+      'qr-reader',
+      {
+        fps: 10,
+        qrbox: { width: 260, height: 260 },
+        rememberLastUsedCamera: true,
+        showTorchButtonIfSupported: true,
+        aspectRatio: 1,
+      },
+      false,
+    );
 
   scanner.render(
     async (decodedText) => {
