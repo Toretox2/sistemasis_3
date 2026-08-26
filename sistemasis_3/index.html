@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuraTech Industries | Asistencia</title>
+    <meta
+      name="description"
+      content="Sistema de asistencia y control de acceso de AuraTech Industries"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/styles.css" />
+    <style>
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+      }
+
+      .attendance-shell {
+        width: min(980px, 100%);
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 28px;
+        box-shadow: 0 24px 60px rgba(11, 19, 43, 0.12);
+        backdrop-filter: blur(14px);
+        overflow: hidden;
+      }
+
+      .attendance-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.5rem 2rem 1rem;
+        border-bottom: 1px solid rgba(11, 19, 43, 0.06);
+        background: linear-gradient(180deg, rgba(71, 168, 189, 0.06), transparent);
+      }
+
+      .brand-mark {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+      }
+
+      .brand-icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+        color: white;
+        font-weight: 700;
+        box-shadow: 0 10px 25px rgba(11, 19, 43, 0.2);
+      }
+
+      .brand-meta h1 {
+        font-size: clamp(1.2rem, 2vw, 1.8rem);
+        line-height: 1.2;
+      }
+
+      .brand-meta span {
+        display: block;
+        color: var(--color-muted);
+        font-size: 0.82rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.55rem;
+        background: rgba(71, 168, 189, 0.1);
+        color: var(--color-primary);
+        border: 1px solid rgba(71, 168, 189, 0.2);
+        border-radius: 999px;
+        padding: 0.55rem 0.9rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--color-accent);
+        box-shadow: 0 0 0 5px rgba(71, 168, 189, 0.15);
+      }
+
+      .attendance-body {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 2rem;
+        padding: 2rem;
+      }
+
+      .scanner-panel {
+        background: linear-gradient(135deg, #0d1a2c, #1b2d4c);
+        border-radius: 24px;
+        padding: 1.2rem;
+        color: white;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+
+      .scanner-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+      }
+
+      .scanner-panel-header h2 {
+        color: white;
+        font-size: 1.05rem;
+      }
+
+      .scanner-frame {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        min-height: 420px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #qr-reader {
+        width: 100%;
+        min-height: 360px;
+      }
+
+      #qr-reader video {
+        width: 100% !important;
+        border-radius: 16px;
+        object-fit: cover;
+      }
+
+      #qr-reader canvas {
+        width: 100% !important;
+        border-radius: 16px;
+      }
+
+      .info-panel {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 1.2rem;
+      }
+
+      .info-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 20px;
+        padding: 1.3rem;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .info-card h3 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .info-list {
+        list-style: none;
+        display: grid;
+        gap: 0.8rem;
+        margin-top: 0.8rem;
+      }
+
+      .info-list li {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        color: var(--color-muted);
+        font-size: 0.95rem;
+      }
+
+      .bullet {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--color-accent);
+        flex-shrink: 0;
+      }
+
+      .key-access {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        box-shadow: 0 10px 20px rgba(11, 19, 43, 0.08);
+        color: var(--color-secondary);
+        transition: transform var(--transition-base), box-shadow var(--transition-base), opacity var(--transition-base);
+        opacity: 0.72;
+        z-index: 10;
+      }
+
+      .key-access:hover {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.03);
+        box-shadow: 0 16px 28px rgba(11, 19, 43, 0.12);
+      }
+
+      .key-access svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      @media (max-width: 860px) {
+        .attendance-body {
+          grid-template-columns: 1fr;
+        }
+
+        .attendance-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="attendance-shell container" aria-label="Lector de asistencia AuraTech">
+      <header class="attendance-header">
+        <div class="brand-mark">
+          <div class="brand-icon">A</div>
+          <div class="brand-meta">
+            <span>AuraTech Industries</span>
+            <h1>Control de asistencia</h1>
+          </div>
+        </div>
+
+        <div class="status-badge">
+          <span class="status-dot"></span>
+          Sistema activo
+        </div>
+      </header>
+
+      <section class="attendance-body">
+        <div class="scanner-panel">
+          <div class="scanner-panel-header">
+            <h2>Escaneo QR de empleado</h2>
+            <span id="scannerStatus" class="status-badge">Listo para escanear</span>
+          </div>
+
+          <div class="scanner-frame">
+            <div id="qr-reader" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <aside class="info-panel">
+          <div class="info-card">
+            <h3>Instrucciones</h3>
+            <ul class="info-list">
+              <li><span class="bullet"></span> Coloque el código QR del empleado frente a la cámara.</li>
+              <li><span class="bullet"></span> La aplicación registrará la fecha y hora exactas del dispositivo.</li>
+              <li><span class="bullet"></span> El sistema detectará automáticamente si es entrada o salida.</li>
+            </ul>
+          </div>
+
+          <div class="info-card">
+            <h3>Seguridad</h3>
+            <ul class="info-list">
+              <li><span class="bullet"></span> Verificación directa contra Supabase.</li>
+              <li><span class="bullet"></span> Registro protegido y trazable.</li>
+              <li><span class="bullet"></span> Integrado con autenticación del sistema.</li>
+            </ul>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <a href="admin-login.html" class="key-access" aria-label="Acceso administrativo" title="Acceso administrativo">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M7.5 10.5C9.433 10.5 11 8.933 11 7C11 5.067 9.433 3.5 7.5 3.5C5.567 3.5 4 5.067 4 7C4 8.933 5.567 10.5 7.5 10.5ZM7.5 12.5C4.462 12.5 2 14.962 2 18V19.25C2 19.664 2.336 20 2.75 20H12.25C12.664 20 13 19.664 13 19.25V18C13 14.962 10.538 12.5 7.5 12.5ZM18.5 7.5H18V9.5H16.5V7.5H15.5C15.224 7.5 15 7.276 15 7C15 6.724 15.224 6.5 15.5 6.5H16.5V4.5H18V6.5H18.5C18.776 6.5 19 6.724 19 7C19 7.276 18.776 7.5 18.5 7.5ZM15 12.5C17.761 12.5 20 10.261 20 7.5C20 4.739 17.761 2.5 15 2.5C12.239 2.5 10 4.739 10 7.5C10 10.261 12.239 12.5 15 12.5Z" fill="currentColor"/>
+      </svg>
+    </a>
+
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/dist/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./js/config.js"></script>
+    <script src="./js/scanner.js"></script>
+  </body>
+</html>

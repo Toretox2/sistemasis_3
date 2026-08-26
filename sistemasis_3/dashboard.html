@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuraTech | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./css/styles.css" />
+    <style>
+      :root {
+        --sidebar-bg: #0B132B;
+        --sidebar-muted: rgba(255,255,255,0.7);
+        --sidebar-active: rgba(71, 168, 189, 0.15);
+        --panel-bg: #ffffff;
+        --panel-border: rgba(11, 19, 43, 0.08);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--font-primary);
+        background: #f3f7fb;
+        color: var(--color-text);
+      }
+
+      .app-shell {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        width: 260px;
+        background: linear-gradient(180deg, var(--sidebar-bg) 0%, #101d34 100%);
+        color: #fff;
+        padding: 1.5rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.4rem 0.5rem 1rem;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+
+      .brand-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--color-accent), #7bd3df);
+        color: #0B132B;
+        font-weight: 800;
+      }
+
+      .brand-text {
+        display: grid;
+        gap: 0.1rem;
+      }
+
+      .brand-text span {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: rgba(255,255,255,0.62);
+      }
+
+      .brand-text strong {
+        font-size: 1rem;
+      }
+
+      .nav {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.82rem 0.9rem;
+        border-radius: 12px;
+        color: var(--sidebar-muted);
+        text-decoration: none;
+        transition: all var(--transition-base);
+        font-weight: 600;
+        border: 1px solid transparent;
+      }
+
+      .nav-item:hover {
+        background: rgba(255,255,255,0.04);
+        border-color: rgba(71,168,189,0.25);
+        transform: translateX(2px);
+      }
+
+      .nav-item.active {
+        background: var(--sidebar-active);
+        color: white;
+        border-color: rgba(71,168,189,0.3);
+        transform: translateX(2px);
+      }
+
+      .nav-badge {
+        min-width: 28px;
+        height: 28px;
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        background: rgba(255,255,255,0.08);
+        font-size: 0.75rem;
+      }
+
+      .sidebar-footer {
+        margin-top: auto;
+        padding: 1rem 0.6rem 0;
+        border-top: 1px solid rgba(255,255,255,0.08);
+      }
+
+      .admin-pill {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.7rem 0.9rem;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.04);
+      }
+
+      .admin-avatar {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #47A8BD, #bfeaf4);
+        color: #0B132B;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+      }
+
+      .content {
+        flex: 1;
+        padding: 1.5rem;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .page-title h2 {
+        margin: 0;
+        font-size: clamp(1.7rem, 3vw, 2.2rem);
+      }
+
+      .page-title p {
+        margin: 0.3rem 0 0;
+        color: var(--color-muted);
+      }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .filter-chip,
+      .action-btn {
+        border: 1px solid var(--panel-border);
+        background: white;
+        color: var(--color-primary);
+        border-radius: 12px;
+        padding: 0.7rem 1rem;
+        cursor: pointer;
+        transition: all var(--transition-base);
+      }
+
+      .action-btn {
+        background: var(--color-primary);
+        color: white;
+        border-color: var(--color-primary);
+      }
+
+      .filter-chip:hover,
+      .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(200px, 1fr));
+        gap: 1.1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .recommendations-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(180px, 1fr));
+        gap: 1rem;
+        padding: 1.1rem 1.2rem 1.2rem;
+      }
+
+      .range-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+
+      .range-input {
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 10px;
+        background: #f8fafc;
+        padding: 0.6rem 0.8rem;
+        color: var(--color-primary);
+        min-width: 130px;
+      }
+
+      .recommendation-card {
+        background: linear-gradient(180deg, #ffffff 0%, #f7fbfd 100%);
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 16px;
+        padding: 1rem;
+      }
+
+      .recommendation-card.warning {
+        border-left: 4px solid #f59e0b;
+      }
+
+      .recommendation-card.success {
+        border-left: 4px solid #22c55e;
+      }
+
+      .recommendation-card.info {
+        border-left: 4px solid #47A8BD;
+      }
+
+      .recommendation-label {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--color-primary);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+      }
+
+      .recommendation-card p {
+        margin: 0;
+        color: var(--color-text);
+        line-height: 1.55;
+      }
+
+      .metric-card {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 18px;
+        padding: 1.2rem 1.1rem;
+        box-shadow: var(--shadow-soft);
+        transition: transform var(--transition-base), box-shadow var(--transition-base);
+      }
+
+      .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-card);
+      }
+
+      .metric-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.8rem;
+      }
+
+      .metric-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: rgba(71, 168, 189, 0.10);
+        color: var(--color-accent);
+        font-weight: 700;
+      }
+
+      .chip {
+        background: rgba(71, 168, 189, 0.10);
+        color: var(--color-primary);
+        border-radius: 999px;
+        padding: 0.35rem 0.6rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .metric-value {
+        font-size: clamp(1.7rem, 2vw, 2.4rem);
+        font-weight: 800;
+        color: var(--color-primary);
+        margin: 0.2rem 0;
+      }
+
+      .metric-sub {
+        color: var(--color-muted);
+        font-size: 0.88rem;
+      }
+
+      .view-panel {
+        display: none;
+        animation: fadeIn 0.2s ease;
+      }
+
+      .view-panel.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .panel {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 18px;
+        box-shadow: var(--shadow-soft);
+        overflow: hidden;
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.2rem 1.2rem 0.9rem;
+        border-bottom: 1px solid rgba(11, 19, 43, 0.06);
+      }
+
+      .panel-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .panel-tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+
+      .mini-select {
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 10px;
+        background: #f8fafc;
+        padding: 0.6rem 0.8rem;
+        color: var(--color-primary);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th, td {
+        text-align: left;
+        padding: 1rem 1.2rem;
+        border-bottom: 1px solid rgba(11, 19, 43, 0.06);
+      }
+
+      th {
+        background: #f8fafc;
+        color: var(--color-primary);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      td {
+        color: var(--color-text);
+        font-size: 0.95rem;
+      }
+
+      tbody tr {
+        transition: background var(--transition-fast);
+      }
+
+      tbody tr:hover {
+        background: rgba(71, 168, 189, 0.03);
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.42rem 0.7rem;
+        border-radius: 999px;
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+
+      .status.present {
+        background: rgba(34, 197, 94, 0.12);
+        color: #15803d;
+      }
+
+      .status.late {
+        background: rgba(245, 158, 11, 0.12);
+        color: #b45309;
+      }
+
+      .status.absent {
+        background: rgba(239, 68, 68, 0.12);
+        color: #b91c1c;
+      }
+
+      .pagination {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.2rem 1.2rem;
+      }
+
+      .page-controls {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .page-btn {
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 10px;
+        background: white;
+        width: 36px;
+        height: 36px;
+        cursor: pointer;
+        transition: all var(--transition-base);
+      }
+
+      .page-btn:hover,
+      .page-btn.active {
+        background: var(--color-accent);
+        color: white;
+        border-color: var(--color-accent);
+      }
+
+      @media (max-width: 900px) {
+        .app-shell {
+          flex-direction: column;
+        }
+
+        .sidebar {
+          width: 100%;
+        }
+
+        .metrics-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-icon">A</div>
+          <div class="brand-text">
+            <span>AuraTech</span>
+            <strong>Administración</strong>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Sidebar">
+          <a class="nav-item active" href="#" data-view="summary">
+            <span class="nav-badge">01</span>
+            <span>Resumen General</span>
+          </a>
+          <a class="nav-item" href="#" data-view="employees">
+            <span class="nav-badge">02</span>
+            <span>Empleados</span>
+          </a>
+          <a class="nav-item" href="#" data-view="payroll">
+            <span class="nav-badge">03</span>
+            <span>Horas Extra / Pagos</span>
+          </a>
+          <a class="nav-item" href="#" data-view="reports">
+            <span class="nav-badge">04</span>
+            <span>Reportes</span>
+          </a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="admin-pill">
+            <div class="admin-avatar">AD</div>
+            <div>
+              <strong>Admin</strong><br />
+              <small style="color: rgba(255,255,255,0.65);">Sistema</small>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <div class="page-title">
+            <h2 id="pageTitle">Resumen General</h2>
+            <p>Panel de control de asistencia y rendimiento</p>
+          </div>
+
+          <div class="topbar-actions">
+            <button class="filter-chip" type="button">Hoy</button>
+            <button id="exportPayrollBtn" class="action-btn" type="button">Exportar Planilla a Excel</button>
+          </div>
+        </header>
+
+        <section id="view-summary" class="view-panel active">
+          <div class="metrics-grid">
+            <article class="metric-card" data-metric-label="Asistencias de hoy">
+              <div class="metric-top">
+                <span class="metric-icon">✓</span>
+                <span class="chip" id="attendanceTrendChip">+0%</span>
+              </div>
+              <div class="metric-value" id="metric-attendance">0</div>
+              <div class="metric-sub">Asistencias de hoy</div>
+            </article>
+
+            <article class="metric-card" data-metric-label="Faltas">
+              <div class="metric-top">
+                <span class="metric-icon">!</span>
+                <span class="chip" id="absenceTrendChip">Atención</span>
+              </div>
+              <div class="metric-value" id="metric-absences">0</div>
+              <div class="metric-sub">Faltas</div>
+            </article>
+
+            <article class="metric-card" data-metric-label="Horas extra totales">
+              <div class="metric-top">
+                <span class="metric-icon">⏱</span>
+                <span class="chip" id="overtimeTrendChip">Semanal</span>
+              </div>
+              <div class="metric-value" id="metric-overtime">0h</div>
+              <div class="metric-sub">Horas extra totales</div>
+            </article>
+          </div>
+
+          <section class="panel" style="margin-bottom: 1.5rem;">
+            <div class="panel-header">
+              <h3>Recomendaciones operativas</h3>
+              <span class="chip">IA sugerida</span>
+            </div>
+            <div class="recommendations-grid">
+              <div class="recommendation-card warning">
+                <span class="recommendation-label">Tardanzas</span>
+                <p id="recommendationLate">Analizando...</p>
+              </div>
+              <div class="recommendation-card success">
+                <span class="recommendation-label">Cobertura</span>
+                <p id="recommendationCoverage">Analizando...</p>
+              </div>
+              <div class="recommendation-card info">
+                <span class="recommendation-label">Planilla</span>
+                <p id="recommendationPayroll">Analizando...</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" style="margin-bottom: 1.5rem;">
+            <div class="panel-header">
+              <h3>Rendimiento operativo</h3>
+            </div>
+            <div style="padding: 1.2rem; display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 1rem;">
+              <div class="info-card" style="background: #f8fafc; border: 1px solid rgba(11,19,43,0.08); border-radius: 16px; padding: 1rem;">
+                <h4 style="margin: 0 0 0.75rem; font-size: 0.95rem; color: var(--color-primary);">Asistencia semanal</h4>
+                <div style="height: 200px; position: relative;">
+                  <canvas id="attendanceChart"></canvas>
+                </div>
+              </div>
+
+              <div class="info-card" style="background: #f8fafc; border: 1px solid rgba(11,19,43,0.08); border-radius: 16px; padding: 1rem;">
+                <h4 style="margin: 0 0 0.75rem; font-size: 0.95rem; color: var(--color-primary);">Top desempeño</h4>
+                <div style="height: 200px; position: relative;">
+                  <canvas id="employeePerformanceChart"></canvas>
+                </div>
+              </div>
+
+              <div class="info-card" style="background: #f8fafc; border: 1px solid rgba(11,19,43,0.08); border-radius: 16px; padding: 1rem;">
+                <h4 style="margin: 0 0 0.75rem; font-size: 0.95rem; color: var(--color-primary);">Por departamento</h4>
+                <div style="height: 200px; position: relative;">
+                  <canvas id="departmentChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Registro de asistencia</h3>
+              <div class="panel-tools">
+                <div class="range-row">
+                  <select id="dateFilter" class="mini-select" aria-label="Filtrar por fecha">
+                    <option value="all">Fecha</option>
+                    <option value="today">Hoy</option>
+                    <option value="week">Esta semana</option>
+                    <option value="month">Este mes</option>
+                    <option value="custom">Personalizado</option>
+                  </select>
+                  <input id="startDate" class="range-input" type="date" aria-label="Fecha inicial" />
+                  <input id="endDate" class="range-input" type="date" aria-label="Fecha final" />
+                </div>
+                <select id="employeeFilter" class="mini-select" aria-label="Filtrar por empleado">
+                  <option value="all">Empleado</option>
+                </select>
+                <select id="departmentFilter" class="mini-select" aria-label="Filtrar por departamento">
+                  <option value="all">Departamento</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Empleado</th>
+                    <th>Departamento</th>
+                    <th>Fecha</th>
+                    <th>Hora entrada</th>
+                    <th>Hora salida</th>
+                    <th>Horas regulares</th>
+                    <th>Horas extra</th>
+                    <th>Faltas</th>
+                    <th>Pago estimado</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="attendanceTableBody"></tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <span id="paginationSummary" style="color: var(--color-muted);">Cargando registros...</span>
+              <div id="paginationControls" class="page-controls"></div>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-employees" class="view-panel">
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Empleados</h3>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Empleado</th>
+                    <th>Departamento</th>
+                    <th>Horas trabajadas</th>
+                    <th>Asistencias</th>
+                    <th>Faltas</th>
+                  </tr>
+                </thead>
+                <tbody id="employeesTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-payroll" class="view-panel">
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Horas Extra / Pagos</h3>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Empleado</th>
+                    <th>Horas extra</th>
+                    <th>Pago estimado</th>
+                    <th>Departamento</th>
+                  </tr>
+                </thead>
+                <tbody id="payrollTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-reports" class="view-panel">
+          <div class="metrics-grid">
+            <article class="metric-card">
+              <div class="metric-top">
+                <span class="metric-icon">📊</span>
+                <span class="chip">Reporte</span>
+              </div>
+              <div class="metric-value" id="reportTotalEmployees">0</div>
+              <div class="metric-sub">Total de empleados</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top">
+                <span class="metric-icon">⏳</span>
+                <span class="chip">Carga</span>
+              </div>
+              <div class="metric-value" id="reportTotalHours">0h</div>
+              <div class="metric-sub">Horas registradas</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-top">
+                <span class="metric-icon">💰</span>
+                <span class="chip">Planilla</span>
+              </div>
+              <div class="metric-value" id="reportTotalPay">S/0</div>
+              <div class="metric-sub">Pago estimado</div>
+            </article>
+          </div>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Resumen ejecutivo</h3>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Indicador</th>
+                    <th>Valor</th>
+                    <th>Observación</th>
+                  </tr>
+                </thead>
+                <tbody id="reportsSummaryBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="./js/config.js"></script>
+    <script src="./js/admin-dashboard.js"></script>
+  </body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AuraTech Industries | Administración</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./css/styles.css" />
+    <style>
+      :root {
+        --glass-bg: rgba(255, 255, 255, 0.12);
+        --glass-border: rgba(255, 255, 255, 0.18);
+        --glass-shadow: 0 20px 50px rgba(11, 19, 43, 0.22);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at top left, rgba(71, 168, 189, 0.18), transparent 30%),
+          radial-gradient(circle at bottom right, rgba(11, 19, 43, 0.16), transparent 30%),
+          linear-gradient(135deg, #081321 0%, #0B132B 35%, #1C2541 100%);
+        font-family: var(--font-primary);
+        padding: 1.5rem;
+      }
+
+      .login-shell {
+        width: min(430px, 100%);
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 28px;
+        box-shadow: var(--glass-shadow);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        padding: 2rem;
+        color: #fff;
+      }
+
+      .login-header {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .brand-badge {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--color-accent), #7dd7e8);
+        color: #0B132B;
+        font-weight: 800;
+        font-size: 1.1rem;
+        box-shadow: 0 14px 30px rgba(71, 168, 189, 0.35);
+      }
+
+      .brand-meta h1 {
+        color: #fff;
+        font-size: 1.55rem;
+        margin: 0;
+        letter-spacing: -0.03em;
+      }
+
+      .brand-meta span {
+        display: block;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.74rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .login-form {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .form-group {
+        display: grid;
+        gap: 0.5rem;
+      }
+
+      .form-group label {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 600;
+      }
+
+      .form-group input {
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+        transition: all var(--transition-base);
+      }
+
+      .form-group input::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: rgba(71, 168, 189, 0.9);
+        box-shadow: 0 0 0 4px rgba(71, 168, 189, 0.15);
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .button-row {
+        margin-top: 0.5rem;
+      }
+
+      .btn {
+        width: 100%;
+        border: none;
+        border-radius: 12px;
+        padding: 0.95rem 1rem;
+        background: linear-gradient(135deg, var(--color-accent), #5dc0d2);
+        color: #081321;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform var(--transition-fast), box-shadow var(--transition-base), filter var(--transition-fast);
+        box-shadow: 0 12px 24px rgba(71, 168, 189, 0.22);
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.04);
+      }
+
+      .demo-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        margin-top: 1rem;
+        padding: 0.8rem 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+      }
+
+      .demo-toggle input {
+        accent-color: var(--color-accent);
+        width: 18px;
+        height: 18px;
+      }
+
+      .demo-toggle label {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+      }
+
+      .login-footer {
+        margin-top: 1rem;
+        text-align: center;
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .login-footer a {
+        color: var(--color-accent);
+        text-decoration: none;
+      }
+
+      .login-footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="login-shell">
+      <header class="login-header">
+        <div class="brand-badge">A</div>
+        <div class="brand-meta">
+          <span>AuraTech Industries</span>
+          <h1>Panel administrativo</h1>
+        </div>
+      </header>
+
+      <form id="adminLoginForm" class="login-form">
+        <div class="form-group">
+          <label for="email">Correo electrónico</label>
+          <input id="email" name="email" type="email" placeholder="admin@auratech.com" required />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input id="password" name="password" type="password" placeholder="••••••••" required />
+        </div>
+
+        <div class="button-row">
+          <button type="submit" class="btn">Iniciar sesión</button>
+        </div>
+      </form>
+
+      <div class="demo-toggle">
+        <input id="demoLoginToggle" type="checkbox" aria-label="Modo demo" />
+        <label for="demoLoginToggle">Modo demo: permitir acceso sin login</label>
+      </div>
+
+      <div class="login-footer">
+        <a href="index.html">Volver al escáner</a>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./js/config.js"></script>
+    <script src="./js/auth.js"></script>
+  </body>
+</html>
