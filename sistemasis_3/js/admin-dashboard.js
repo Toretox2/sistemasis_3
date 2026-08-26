@@ -47,40 +47,33 @@ function toISODate(date) {
   return new Date(date.getTime() - offset).toISOString().split('T')[0];
 }
 
-function isDemoLoginEnabled() {
-  const stored = localStorage.getItem('auratech_demo_login');
-  return stored === null ? true : stored === 'true';
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
   const supabase = window.AuraTechSupabase;
 
-  if (!isDemoLoginEnabled()) {
-    if (!supabase) {
-      console.error('Supabase no está inicializado.');
+  if (!supabase) {
+    console.error('Supabase no está inicializado.');
+    window.location.href = './admin-login.html';
+    return;
+  }
+
+  try {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!session) {
       window.location.href = './admin-login.html';
       return;
     }
-
-    try {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-
-      if (error) {
-        throw error;
-      }
-
-      if (!session) {
-        window.location.href = './admin-login.html';
-        return;
-      }
-    } catch (error) {
-      console.error('No hay sesión activa:', error);
-      window.location.href = './admin-login.html';
-      return;
-    }
+  } catch (error) {
+    console.error('No hay sesión activa:', error);
+    window.location.href = './admin-login.html';
+    return;
   }
 
   const exportButton = document.getElementById('exportPayrollBtn');

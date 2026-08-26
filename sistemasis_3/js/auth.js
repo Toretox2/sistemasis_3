@@ -1,23 +1,6 @@
-function getDemoLoginMode() {
-  const stored = localStorage.getItem('auratech_demo_login');
-  return stored === null ? true : stored === 'true';
-}
-
-function setDemoLoginMode(enabled) {
-  localStorage.setItem('auratech_demo_login', String(enabled));
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('adminLoginForm');
-  const toggle = document.getElementById('demoLoginToggle');
   const supabase = window.AuraTechSupabase;
-
-  if (toggle) {
-    toggle.checked = getDemoLoginMode();
-    toggle.addEventListener('change', (event) => {
-      setDemoLoginMode(event.target.checked);
-    });
-  }
 
   if (!form) {
     return;
@@ -25,11 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-
-    if (getDemoLoginMode()) {
-      window.location.href = './dashboard.html';
-      return;
-    }
 
     const email = document.getElementById('email')?.value.trim();
     const password = document.getElementById('password')?.value;
