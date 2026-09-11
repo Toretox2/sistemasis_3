@@ -587,6 +587,8 @@ function renderDashboard() {
         status === 'falta' ? 'absent' : status === 'retardo' ? 'late' : 'present';
       const totalHours = Number(row.horas_trabajadas || 0);
       const breakdown = buildPaymentBreakdown(row.employees, totalHours, status);
+      const regularHours = breakdown.regularHours;
+      const extraHours = breakdown.overtimeHours;
       const absences = status === 'falta' ? 1 : 0;
       const payEstimate = formatCurrency(breakdown.totalPay);
 
