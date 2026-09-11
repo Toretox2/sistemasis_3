@@ -585,10 +585,13 @@ function renderDashboard() {
         status === 'falta' ? 'Falta' : status === 'retardo' ? 'Retardo' : 'Presente';
       const statusClass =
         status === 'falta' ? 'absent' : status === 'retardo' ? 'late' : 'present';
+      const empleado = row.employees || {};
+      const horasTrabajadas = Number(row.horas_trabajadas || 0);
+      const horasJornada = Number(empleado.horas_jornada || 8);
+      let regularHours = horasTrabajadas > horasJornada ? horasJornada : horasTrabajadas;
+      let overtimeHours = horasTrabajadas > horasJornada ? horasTrabajadas - horasJornada : 0;
       const totalHours = Number(row.horas_trabajadas || 0);
       const breakdown = buildPaymentBreakdown(row.employees, totalHours, status);
-      const regularHours = breakdown.regularHours;
-      const extraHours = breakdown.overtimeHours;
       const absences = status === 'falta' ? 1 : 0;
       const payEstimate = formatCurrency(breakdown.totalPay);
 
