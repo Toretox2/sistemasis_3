@@ -128,7 +128,7 @@ function switchView(viewName) {
   const titles = {
     summary: 'Resumen General',
     employees: 'Empleados',
-    payroll: 'Horas Extra / Pagos',
+    payroll: 'Pagos',
     reports: 'Reportes',
   };
 
@@ -664,49 +664,31 @@ function renderEmployeesView() {
   const employeeMap = new Map();
 
   rows.forEach((row) => {
-    const employeeId = row.employee_id || row.employees?.id || row.employees?.nombre;
-    const employeeName = row.employees?.nombre || 'Empleado no encontrado';
-    const department = row.employees?.cargo || 'Sin departamento';
+    const employeeData = row.employees || {};
+    const employeeId = row.employee_id || employeeData.id || employeeData.nombre;
+    const employeeName = employeeData.nombre || 'Empleado no encontrado';
+    const department = employeeData.cargo || 'Sin departamento';
 
     if (!employeeMap.has(employeeId)) {
       employeeMap.set(employeeId, {
         employeeId,
         name: employeeName,
         department,
-        hours: 0,
-        attendance: 0,
-        absences: 0,
-        hoursExtra: 0,
-        missingHours: 0,
-        totalPay: 0,
-        hourlyRate: 0,
-        payForHours: 0,
+        salaryBase: parseFloat(employeeData.salario_base) || 0,
+        jornada: parseFloat(employeeData.horas_jornada) || 8,
       });
     }
 
     const employee = employeeMap.get(employeeId);
-    const breakdown = buildPaymentBreakdown(row.employees, Number(row.horas_trabajadas || 0), row.estado);
-
-    employee.hours += Number(row.horas_trabajadas || 0);
-    employee.hoursExtra += breakdown.overtimeHours;
-    employee.missingHours += breakdown.missingHours;
-    employee.totalPay += breakdown.totalPay;
-    employee.payForHours += breakdown.regularPay + breakdown.overtimePay;
-    employee.hourlyRate = breakdown.hourlyRate || employee.hourlyRate || 0;
-
-    if (row.estado === 'falta') {
-      employee.absences += 1;
-    } else {
-      employee.attendance += 1;
-    }
-
     employee.department = employee.department || department;
+    employee.salaryBase = employee.salaryBase || parseFloat(employeeData.salario_base) || 0;
+    employee.jornada = employee.jornada || parseFloat(employeeData.horas_jornada) || 8;
   });
 
-  const employeeList = [...employeeMap.values()].sort((a, b) => b.hours - a.hours);
+  const employeeList = [...employeeMap.values()].sort((a, b) => a.name.localeCompare(b.name));
 
   if (!employeeList.length) {
-    tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center; color: var(--color-muted); padding: 2rem;">Sin empleados registrados.</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--color-muted); padding: 2rem;">Sin empleados registrados.</td></tr>';
     return;
   }
 
@@ -714,14 +696,8 @@ function renderEmployeesView() {
     <tr>
       <td>${employee.name}</td>
       <td>${employee.department}</td>
-      <td>${Number(employee.hours.toFixed(1))}h</td>
-      <td>${employee.attendance}</td>
-      <td>${employee.absences}</td>
-      <td>${formatCurrency(employee.hourlyRate)}</td>
-      <td>${formatCurrency(employee.payForHours)}</td>
-      <td>${Number(employee.hoursExtra.toFixed(1))}h</td>
-      <td>${Number(employee.missingHours.toFixed(1))}h</td>
-      <td>${formatCurrency(employee.totalPay)}</td>
+      <td>${formatCurrency(employee.salaryBase)}</td>
+      <td>${Number(employee.jornada.toFixed(1))}</td>
       <td><button class="edit-employee-btn" data-employee-id="${employee.employeeId}" type="button">Editar</button></td>
     </tr>
   `).join('');
@@ -735,39 +711,61 @@ function renderPayrollView() {
   const employeeMap = new Map();
 
   rows.forEach((row) => {
-    const employeeName = row.employees?.nombre || 'Empleado no encontrado';
-    const department = row.employees?.cargo || 'Sin departamento';
+    const employeeData = row.employees || {};
+    const employeeId = row.employee_id || employeeData.id || employeeData.nombre;
+    const employeeName = employeeData.nombre || 'Empleado no encontrado';
+    const department = employeeData.cargo || 'Sin departamento';
 
-    if (!employeeMap.has(employeeName)) {
-      employeeMap.set(employeeName, {
+    if (!employeeMap.has(employeeId)) {
+      employeeMap.set(employeeId, {
         name: employeeName,
         department,
-        extraHours: 0,
-        payEstimate: 0,
+        hoursWorked: 0,
+        attendance: 0,
+        absences: 0,
+        hourlyRate: 0,
+        payForHours: 0,
+        hoursExtra: 0,
+        missingHours: 0,
+        totalPay: 0,
       });
     }
 
-    const employee = employeeMap.get(employeeName);
-    const totalHours = Number(row.horas_trabajadas || 0);
-    const breakdown = buildPaymentBreakdown(row.employees, totalHours, row.estado);
-    employee.extraHours += breakdown.overtimeHours;
-    employee.payEstimate += breakdown.totalPay;
+    const employee = employeeMap.get(employeeId);
+    const hoursWorked = Number(row.horas_trabajadas || 0);
+    const horasJornada = Number(employeeData.horas_jornada || 8);
+
+    const breakdown = buildPaymentBreakdown(employeeData, hoursWorked, row.estado);
+    employee.hoursWorked += hoursWorked;
+    employee.attendance += row.estado === 'falta' ? 0 : 1;
+    employee.absences += row.estado === 'falta' ? 1 : 0;
+    employee.hourlyRate = breakdown.hourlyRate || employee.hourlyRate || 0;
+    employee.payForHours += breakdown.payForHours;
+    employee.hoursExtra += breakdown.overtimeHours;
+    employee.missingHours += Number.isFinite(hoursWorked) ? Math.max(0, horasJornada - hoursWorked) : 0;
+    employee.totalPay += breakdown.totalPay;
     employee.department = employee.department || department;
   });
 
-  const payrollList = [...employeeMap.values()].sort((a, b) => b.payEstimate - a.payEstimate);
+  const payrollList = [...employeeMap.values()].sort((a, b) => b.totalPay - a.totalPay);
 
   if (!payrollList.length) {
-    tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color: var(--color-muted); padding: 2rem;">Sin registros de pago.</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; color: var(--color-muted); padding: 2rem;">Sin registros de pago.</td></tr>';
     return;
   }
 
   tableBody.innerHTML = payrollList.map((employee) => `
     <tr>
       <td>${employee.name}</td>
-      <td>${Number(employee.extraHours.toFixed(1))}h</td>
-      <td>${formatCurrency(employee.payEstimate)}</td>
       <td>${employee.department}</td>
+      <td>${Number(employee.hoursWorked.toFixed(1))}h</td>
+      <td>${employee.attendance}</td>
+      <td>${employee.absences}</td>
+      <td>${formatCurrency(employee.hourlyRate)}</td>
+      <td>${formatCurrency(employee.payForHours)}</td>
+      <td>${Number(employee.hoursExtra.toFixed(1))}h</td>
+      <td>${Number(Math.max(0, employee.missingHours).toFixed(1))}h</td>
+      <td>${formatCurrency(employee.totalPay)}</td>
     </tr>
   `).join('');
 }
@@ -981,6 +979,7 @@ function buildPaymentBreakdown(employee, totalHours = 0, status = 'presente') {
 
   const regularHours = Math.min(hoursWorked, workdayHours);
   const overtimeHours = Math.max(hoursWorked - workdayHours, 0);
+  const missingHours = Math.max(0, workdayHours - hoursWorked);
 
   const regularPay = regularHours * hourlyRate;
   const overtimePay = overtimeHours * (hourlyRate * 1.5);
@@ -994,6 +993,7 @@ function buildPaymentBreakdown(employee, totalHours = 0, status = 'presente') {
     hourlyRate,
     regularHours,
     overtimeHours,
+    missingHours,
     regularPay,
     overtimePay,
     payForHours,
