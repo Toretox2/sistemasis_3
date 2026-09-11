@@ -264,11 +264,11 @@ function bindEmployeeModal() {
       }
 
       closeModal();
-      alert('Cambios guardados correctamente.');
+      showToast('Datos actualizados correctamente');
       await loadDashboardData();
     } catch (error) {
       console.error('Error al guardar los cambios del empleado:', error);
-      alert('No se pudieron guardar los cambios. Intenta nuevamente.');
+      showToast('No se pudieron guardar los cambios. Intenta nuevamente.');
     }
   });
 
@@ -586,12 +586,12 @@ function renderDashboard() {
         status === 'falta' ? 'Falta' : status === 'retardo' ? 'Retardo' : 'Presente';
       const statusClass =
         status === 'falta' ? 'absent' : status === 'retardo' ? 'late' : 'present';
-      const empleado = row.employees || {};
+      const empleado = row;
       const datosEmpleado = empleado.employees || empleado;
       console.log('Datos del registro:', empleado);
-      const salarioBase = parseFloat(datosEmpleado.salario_base) || 0;
-      const horasJornada = parseFloat(datosEmpleado.horas_jornada) || 8;
-      const horasTrabajadas = parseFloat(row.horas_trabajadas) || 0;
+      const salarioBase = parseFloat(datosEmpleado?.salario_base) || 0;
+      const horasJornada = parseFloat(datosEmpleado?.horas_jornada) || 8;
+      const horasTrabajadas = parseFloat(empleado?.horas_trabajadas) || 0;
       const dailyRate = salarioBase / 30;
       const hourlyRate = dailyRate / horasJornada;
       const regularHours = Math.min(horasTrabajadas, horasJornada);
@@ -837,20 +837,12 @@ async function fetchAttendanceWithEmployees() {
   const { data, error } = await supabase
     .from('attendance_logs')
     .select(`
-      id,
-      employee_id,
-      fecha,
-      hora_entrada,
-      hora_salida,
-      horas_trabajadas,
-      horas_extra,
-      estado,
+      *,
       employees:employee_id (
         id,
         nombre,
         cargo,
         salario_base,
-        pago_por_dia,
         horas_jornada
       )
     `)
@@ -872,7 +864,7 @@ async function fetchEmployees() {
 
   const { data, error } = await supabase
     .from('employees')
-    .select('id, nombre, cargo');
+    .select('id, nombre, cargo, salario_base, horas_jornada');
 
   if (error) {
     throw error;
@@ -1041,6 +1033,50 @@ function formatCurrency(value) {
     currency: dashboardState.currency,
     minimumFractionDigits: 2,
   }).format(Number(value || 0));
+}
+
+function showToast(message) {
+  const existing = document.querySelector('.auratech-toast');
+
+  if (existing) {
+    existing.remove();
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'auratech-toast';
+  toast.textContent = message;
+
+  Object.assign(toast.style, {
+    position: 'fixed',
+    top: '1rem',
+    right: '1rem',
+    zIndex: '2000',
+    padding: '0.9rem 1.1rem',
+    borderRadius: '12px',
+    background: '#47A8BD',
+    color: '#ffffff',
+    boxShadow: '0 12px 30px rgba(11, 19, 43, 0.18)',
+    fontWeight: '600',
+    opacity: '0',
+    transform: 'translateY(-10px)',
+    transition: 'opacity 0.3s ease, transform 0.3s ease',
+  });
+
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+  });
+
+  window.setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-10px)';
+
+    window.setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 3000);
 }
 
 function buildPayrollExport(rows) {
