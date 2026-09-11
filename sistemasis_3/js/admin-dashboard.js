@@ -587,8 +587,10 @@ function renderDashboard() {
       const statusClass =
         status === 'falta' ? 'absent' : status === 'retardo' ? 'late' : 'present';
       const empleado = row.employees || {};
-      const salarioBase = parseFloat(empleado.salario_base) || 0;
-      const horasJornada = parseFloat(empleado.horas_jornada) || 8;
+      const datosEmpleado = empleado.employees || empleado;
+      console.log('Datos del registro:', empleado);
+      const salarioBase = parseFloat(datosEmpleado.salario_base) || 0;
+      const horasJornada = parseFloat(datosEmpleado.horas_jornada) || 8;
       const horasTrabajadas = parseFloat(row.horas_trabajadas) || 0;
       const dailyRate = salarioBase / 30;
       const hourlyRate = dailyRate / horasJornada;
