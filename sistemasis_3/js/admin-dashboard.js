@@ -586,12 +586,10 @@ function renderDashboard() {
         status === 'falta' ? 'Falta' : status === 'retardo' ? 'Retardo' : 'Presente';
       const statusClass =
         status === 'falta' ? 'absent' : status === 'retardo' ? 'late' : 'present';
-      const empleado = row;
-      const datosEmpleado = empleado.employees || empleado;
-      console.log('Datos del registro:', empleado);
-      const salarioBase = parseFloat(datosEmpleado?.salario_base) || 0;
-      const horasJornada = parseFloat(datosEmpleado?.horas_jornada) || 8;
-      const horasTrabajadas = parseFloat(empleado?.horas_trabajadas) || 0;
+      const employeeData = row.employees || {};
+      const salarioBase = parseFloat(employeeData.salario_base) || 0;
+      const horasJornada = parseFloat(employeeData.horas_jornada) || 8;
+      const horasTrabajadas = parseFloat(row.horas_trabajadas) || 0;
       const dailyRate = salarioBase / 30;
       const hourlyRate = dailyRate / horasJornada;
       const regularHours = Math.min(horasTrabajadas, horasJornada);
@@ -964,11 +962,13 @@ function renderOperationalRecommendations(rows) {
 }
 
 function getEmployeePayProfile(employee = {}) {
-  const dailyPay = Number(employee?.pago_por_dia ?? employee?.salario_base ?? 0);
+  const salarioBase = Number(employee?.salario_base ?? employee?.pago_por_dia ?? 0);
   const workdayHours = Number(employee?.horas_jornada || 8);
+  const dailyPay = salarioBase > 0 ? salarioBase / 30 : 0;
   const hourlyRate = workdayHours > 0 ? dailyPay / workdayHours : 0;
 
   return {
+    salarioBase,
     dailyPay,
     workdayHours,
     hourlyRate,
@@ -976,33 +976,27 @@ function getEmployeePayProfile(employee = {}) {
 }
 
 function buildPaymentBreakdown(employee, totalHours = 0, status = 'presente') {
-  const { dailyPay, workdayHours, hourlyRate } = getEmployeePayProfile(employee);
+  const { salarioBase, dailyPay, workdayHours, hourlyRate } = getEmployeePayProfile(employee);
   const hoursWorked = Math.max(Number(totalHours || 0), 0);
 
   const regularHours = Math.min(hoursWorked, workdayHours);
   const overtimeHours = Math.max(hoursWorked - workdayHours, 0);
-  const missingHours = status === 'falta'
-    ? workdayHours
-    : Math.max(workdayHours - hoursWorked, 0);
 
   const regularPay = regularHours * hourlyRate;
-  const overtimePay = overtimeHours * hourlyRate * 1.5;
-  const missingDeduction = status === 'falta' ? dailyPay : missingHours * hourlyRate;
-
-  const totalPay = status === 'falta'
-    ? 0
-    : Math.max(regularPay + overtimePay - missingDeduction, 0);
+  const overtimePay = overtimeHours * (hourlyRate * 1.5);
+  const payForHours = regularPay + overtimePay;
+  const totalPay = status === 'falta' ? 0 : payForHours;
 
   return {
+    salarioBase,
     dailyPay,
     workdayHours,
     hourlyRate,
     regularHours,
     overtimeHours,
-    missingHours,
     regularPay,
     overtimePay,
-    missingDeduction,
+    payForHours,
     totalPay,
   };
 }
