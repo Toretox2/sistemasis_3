@@ -3,6 +3,7 @@ const dashboardState = {
   filteredRows: [],
   currentPage: 1,
   pageSize: 5,
+  currency: 'GTQ',
 };
 
 function calculateWorkedHours(startTime, endTime) {
@@ -102,6 +103,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   bindFilters();
   bindNavigation();
+  bindCurrencySelector();
+  bindEmployeeModal();
   await loadDashboardData();
   renderPerformanceSummary();
 });
@@ -182,6 +185,103 @@ function bindFilters() {
   [startDate, endDate].forEach((element) => {
     if (element) {
       element.addEventListener('change', updateRows);
+    }
+  });
+}
+
+function bindCurrencySelector() {
+  const currencySelector = document.getElementById('currencySelector');
+
+  if (!currencySelector) {
+    return;
+  }
+
+  currencySelector.value = dashboardState.currency;
+  currencySelector.addEventListener('change', (event) => {
+    dashboardState.currency = event.target.value;
+    renderDashboard();
+  });
+}
+
+function bindEmployeeModal() {
+  const modal = document.getElementById('employeeEditModal');
+  const saveButton = document.getElementById('saveEmployeeEdit');
+  const cancelButton = document.getElementById('cancelEmployeeEdit');
+  const closeButton = document.getElementById('closeEmployeeEdit');
+
+  if (!modal || !saveButton || !cancelButton || !closeButton) {
+    return;
+  }
+
+  const closeModal = () => {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+  };
+
+  const openModal = (employeeId) => {
+    const allRows = dashboardState.filteredRows.length ? dashboardState.filteredRows : dashboardState.allRows;
+    const row = allRows.find((item) => (item.employee_id || item.employees?.id) === employeeId) || allRows[0];
+    const employee = row?.employees || {};
+
+    document.getElementById('employeeEditId').value = employeeId;
+    document.getElementById('employeeEditDailyPay').value = employee.pago_por_dia ?? employee.salario_base ?? 0;
+    document.getElementById('employeeEditWorkdayHours').value = employee.horas_jornada || 8;
+
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  };
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  closeButton.addEventListener('click', closeModal);
+  cancelButton.addEventListener('click', closeModal);
+
+  saveButton.addEventListener('click', async () => {
+    const supabase = window.AuraTechSupabase;
+    const employeeId = document.getElementById('employeeEditId').value;
+    const dailyPay = Number(document.getElementById('employeeEditDailyPay').value || 0);
+    const workdayHours = Number(document.getElementById('employeeEditWorkdayHours').value || 8);
+
+    if (!supabase || !employeeId) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({
+          pago_por_dia: dailyPay,
+          horas_jornada: workdayHours,
+        })
+        .eq('id', employeeId);
+
+      if (error) {
+        throw error;
+      }
+
+      closeModal();
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error al guardar los cambios del empleado:', error);
+      alert('No se pudieron guardar los cambios. Intenta nuevamente.');
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('.edit-employee-btn');
+
+    if (!button) {
+      return;
+    }
+
+    const employeeId = button.dataset.employeeId;
+
+    if (employeeId) {
+      openModal(employeeId);
     }
   });
 }
@@ -486,10 +586,9 @@ function renderDashboard() {
       const statusClass =
         status === 'falta' ? 'absent' : status === 'retardo' ? 'late' : 'present';
       const totalHours = Number(row.horas_trabajadas || 0);
-      const regularHours = Math.min(totalHours, 8);
-      const extraHours = Math.max(totalHours - 8, 0);
+      const breakdown = buildPaymentBreakdown(row.employees, totalHours, status);
       const absences = status === 'falta' ? 1 : 0;
-      const payEstimate = formatCurrency(calculateEstimatedPay(row.employees?.salario_base, regularHours, extraHours, status));
+      const payEstimate = formatCurrency(breakdown.totalPay);
 
       return `
         <tr>
@@ -555,33 +654,49 @@ function renderEmployeesView() {
   const employeeMap = new Map();
 
   rows.forEach((row) => {
+    const employeeId = row.employee_id || row.employees?.id || row.employees?.nombre;
     const employeeName = row.employees?.nombre || 'Empleado no encontrado';
     const department = row.employees?.cargo || 'Sin departamento';
 
-    if (!employeeMap.has(employeeName)) {
-      employeeMap.set(employeeName, {
+    if (!employeeMap.has(employeeId)) {
+      employeeMap.set(employeeId, {
+        employeeId,
         name: employeeName,
         department,
         hours: 0,
         attendance: 0,
         absences: 0,
+        hoursExtra: 0,
+        missingHours: 0,
+        totalPay: 0,
+        hourlyRate: 0,
+        payForHours: 0,
       });
     }
 
-    const employee = employeeMap.get(employeeName);
+    const employee = employeeMap.get(employeeId);
+    const breakdown = buildPaymentBreakdown(row.employees, Number(row.horas_trabajadas || 0), row.estado);
+
     employee.hours += Number(row.horas_trabajadas || 0);
+    employee.hoursExtra += breakdown.overtimeHours;
+    employee.missingHours += breakdown.missingHours;
+    employee.totalPay += breakdown.totalPay;
+    employee.payForHours += breakdown.regularPay + breakdown.overtimePay;
+    employee.hourlyRate = breakdown.hourlyRate || employee.hourlyRate || 0;
+
     if (row.estado === 'falta') {
       employee.absences += 1;
     } else {
       employee.attendance += 1;
     }
+
     employee.department = employee.department || department;
   });
 
   const employeeList = [...employeeMap.values()].sort((a, b) => b.hours - a.hours);
 
   if (!employeeList.length) {
-    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color: var(--color-muted); padding: 2rem;">Sin empleados registrados.</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center; color: var(--color-muted); padding: 2rem;">Sin empleados registrados.</td></tr>';
     return;
   }
 
@@ -592,6 +707,12 @@ function renderEmployeesView() {
       <td>${Number(employee.hours.toFixed(1))}h</td>
       <td>${employee.attendance}</td>
       <td>${employee.absences}</td>
+      <td>${formatCurrency(employee.hourlyRate)}</td>
+      <td>${formatCurrency(employee.payForHours)}</td>
+      <td>${Number(employee.hoursExtra.toFixed(1))}h</td>
+      <td>${Number(employee.missingHours.toFixed(1))}h</td>
+      <td>${formatCurrency(employee.totalPay)}</td>
+      <td><button class="edit-employee-btn" data-employee-id="${employee.employeeId}" type="button">Editar</button></td>
     </tr>
   `).join('');
 }
@@ -618,10 +739,9 @@ function renderPayrollView() {
 
     const employee = employeeMap.get(employeeName);
     const totalHours = Number(row.horas_trabajadas || 0);
-    const regularHours = Math.min(totalHours, 8);
-    const extraHours = Math.max(totalHours - 8, 0);
-    employee.extraHours += extraHours;
-    employee.payEstimate += calculateEstimatedPay(row.employees?.salario_base, regularHours, extraHours, row.estado);
+    const breakdown = buildPaymentBreakdown(row.employees, totalHours, row.estado);
+    employee.extraHours += breakdown.overtimeHours;
+    employee.payEstimate += breakdown.totalPay;
     employee.department = employee.department || department;
   });
 
@@ -655,9 +775,7 @@ function renderReportsView() {
   const totalHours = rows.reduce((sum, row) => sum + Number(row.horas_trabajadas || 0), 0);
   const totalPay = rows.reduce((sum, row) => {
     const totalHoursValue = Number(row.horas_trabajadas || 0);
-    const regular = Math.min(totalHoursValue, 8);
-    const overtime = Math.max(totalHoursValue - 8, 0);
-    return sum + calculateEstimatedPay(row.employees?.salario_base, regular, overtime, row.estado);
+    return sum + buildPaymentBreakdown(row.employees, totalHoursValue, row.estado).totalPay;
   }, 0);
 
   const absentCount = rows.filter((row) => row.estado === 'falta').length;
@@ -716,9 +834,12 @@ async function fetchAttendanceWithEmployees() {
       horas_extra,
       estado,
       employees:employee_id (
+        id,
         nombre,
         cargo,
-        salario_base
+        salario_base,
+        pago_por_dia,
+        horas_jornada
       )
     `)
     .order('fecha', { ascending: false });
@@ -838,8 +959,58 @@ function renderOperationalRecommendations(rows) {
   }
 }
 
-function calculateEstimatedPay(baseSalary, regularHours, extraHours, status) {
-  const salary = Number(baseSalary || 0);
+function getEmployeePayProfile(employee = {}) {
+  const dailyPay = Number(employee?.pago_por_dia ?? employee?.salario_base ?? 0);
+  const workdayHours = Number(employee?.horas_jornada || 8);
+  const hourlyRate = workdayHours > 0 ? dailyPay / workdayHours : 0;
+
+  return {
+    dailyPay,
+    workdayHours,
+    hourlyRate,
+  };
+}
+
+function buildPaymentBreakdown(employee, totalHours = 0, status = 'presente') {
+  const { dailyPay, workdayHours, hourlyRate } = getEmployeePayProfile(employee);
+  const hoursWorked = Math.max(Number(totalHours || 0), 0);
+
+  const regularHours = Math.min(hoursWorked, workdayHours);
+  const overtimeHours = Math.max(hoursWorked - workdayHours, 0);
+  const missingHours = status === 'falta'
+    ? workdayHours
+    : Math.max(workdayHours - hoursWorked, 0);
+
+  const regularPay = regularHours * hourlyRate;
+  const overtimePay = overtimeHours * hourlyRate * 1.5;
+  const missingDeduction = status === 'falta' ? dailyPay : missingHours * hourlyRate;
+
+  const totalPay = status === 'falta'
+    ? 0
+    : Math.max(regularPay + overtimePay - missingDeduction, 0);
+
+  return {
+    dailyPay,
+    workdayHours,
+    hourlyRate,
+    regularHours,
+    overtimeHours,
+    missingHours,
+    regularPay,
+    overtimePay,
+    missingDeduction,
+    totalPay,
+  };
+}
+
+function calculateEstimatedPay(employeeOrBaseSalary, regularHours, extraHours, status) {
+  if (employeeOrBaseSalary && typeof employeeOrBaseSalary === 'object') {
+    const totalHours = Number(regularHours || 0);
+    const paymentStatus = typeof extraHours === 'string' ? extraHours : status || 'presente';
+    return buildPaymentBreakdown(employeeOrBaseSalary, totalHours, paymentStatus).totalPay;
+  }
+
+  const salary = Number(employeeOrBaseSalary || 0);
 
   if (!salary || status === 'falta') {
     return 0;
@@ -853,9 +1024,9 @@ function calculateEstimatedPay(baseSalary, regularHours, extraHours, status) {
 }
 
 function formatCurrency(value) {
-  return new Intl.NumberFormat('es-PE', {
+  return new Intl.NumberFormat('es-ES', {
     style: 'currency',
-    currency: 'PEN',
+    currency: dashboardState.currency,
     minimumFractionDigits: 2,
   }).format(Number(value || 0));
 }
@@ -864,18 +1035,18 @@ function buildPayrollExport(rows) {
   return rows.map((row) => {
     const employeeName = row.employees?.nombre || 'Empleado no encontrado';
     const totalHours = Number(row.horas_trabajadas || 0);
-    const regularHours = Math.min(totalHours, 8);
-    const extraHours = calculateExtraHours(totalHours);
+    const breakdown = buildPaymentBreakdown(row.employees, totalHours, row.estado);
     const missingDays = row.estado === 'falta' ? 1 : 0;
-    const estimatedPay = calculateEstimatedPay(row.employees?.salario_base, regularHours, extraHours, row.estado);
+    const estimatedPay = breakdown.totalPay;
 
     return {
       'Nombre del Empleado': employeeName,
       Fecha: row.fecha,
       'Hora Entrada': row.hora_entrada || '—',
       'Hora Salida': row.hora_salida || '—',
-      'Horas Regulares': Number(regularHours.toFixed(2)),
-      'Horas Extra': Number(extraHours.toFixed(2)),
+      'Horas Regulares': Number(breakdown.regularHours.toFixed(2)),
+      'Horas Extra': Number(breakdown.overtimeHours.toFixed(2)),
+      'Horas Faltantes': Number(breakdown.missingHours.toFixed(2)),
       Faltas: missingDays,
       'Pago Estimado': Number(estimatedPay.toFixed(2)),
     };

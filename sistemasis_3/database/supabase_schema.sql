@@ -9,8 +9,14 @@ CREATE TABLE IF NOT EXISTS public.employees (
     cargo TEXT NOT NULL,
     qr_code_hash TEXT NOT NULL UNIQUE,
     salario_base NUMERIC(12,2) NOT NULL DEFAULT 0,
+    pago_por_dia NUMERIC(12,2) NOT NULL DEFAULT 0,
+    horas_jornada NUMERIC(5,2) NOT NULL DEFAULT 8,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.employees
+    ADD COLUMN IF NOT EXISTS pago_por_dia NUMERIC(12,2) NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS horas_jornada NUMERIC(5,2) NOT NULL DEFAULT 8;
 
 CREATE TABLE IF NOT EXISTS public.attendance_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -453,6 +453,79 @@
         border-color: var(--color-accent);
       }
 
+      .edit-employee-btn {
+        border: 1px solid rgba(11, 19, 43, 0.12);
+        background: rgba(71, 168, 189, 0.08);
+        color: var(--color-primary);
+        border-radius: 10px;
+        padding: 0.45rem 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.25s ease;
+      }
+
+      .edit-employee-btn:hover {
+        background: rgba(71, 168, 189, 0.18);
+        transform: translateY(-1px);
+      }
+
+      .employee-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(11, 19, 43, 0.42);
+        backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 1rem;
+      }
+
+      .employee-modal-backdrop.is-open {
+        display: flex;
+      }
+
+      .employee-modal {
+        width: min(440px, 100%);
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 22px;
+        box-shadow: 0 24px 60px rgba(11, 19, 43, 0.18);
+        padding: 1.5rem;
+      }
+
+      .employee-modal h3 {
+        margin: 0;
+      }
+
+      .employee-modal-grid {
+        display: grid;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .employee-modal-grid label {
+        display: grid;
+        gap: 0.45rem;
+        font-size: 0.92rem;
+        color: var(--color-primary);
+        font-weight: 600;
+      }
+
+      .employee-modal-grid input {
+        border: 1px solid rgba(11, 19, 43, 0.12);
+        border-radius: 12px;
+        padding: 0.75rem 0.85rem;
+        background: rgba(255, 255, 255, 0.95);
+      }
+
+      .employee-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+      }
+
       @media (max-width: 900px) {
         .app-shell {
           flex-direction: column;
@@ -518,6 +591,11 @@
 
           <div class="topbar-actions">
             <button class="filter-chip" type="button">Hoy</button>
+            <select id="currencySelector" class="mini-select" aria-label="Seleccionar moneda">
+              <option value="USD">USD (Dólares)</option>
+              <option value="EUR">EUR (Euros)</option>
+              <option value="GTQ" selected>GTQ (Quetzales)</option>
+            </select>
             <button id="exportPayrollBtn" class="action-btn" type="button">Exportar Planilla a Excel</button>
           </div>
         </header>
@@ -666,6 +744,12 @@
                     <th>Horas trabajadas</th>
                     <th>Asistencias</th>
                     <th>Faltas</th>
+                    <th>Pago por hora</th>
+                    <th>Pago por horas</th>
+                    <th>Horas extra</th>
+                    <th>Horas faltantes</th>
+                    <th>Total a pagar</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody id="employeesTableBody"></tbody>
@@ -742,6 +826,34 @@
           </section>
         </section>
       </main>
+    </div>
+
+    <div id="employeeEditModal" class="employee-modal-backdrop" aria-hidden="true">
+      <div class="employee-modal" role="dialog" aria-modal="true" aria-labelledby="employeeModalTitle">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+          <h3 id="employeeModalTitle">Editar empleado</h3>
+          <button id="closeEmployeeEdit" class="edit-employee-btn" type="button" aria-label="Cerrar">✕</button>
+        </div>
+
+        <input id="employeeEditId" type="hidden" />
+
+        <div class="employee-modal-grid">
+          <label>
+            Pago por día
+            <input id="employeeEditDailyPay" type="number" step="0.01" min="0" placeholder="0.00" />
+          </label>
+
+          <label>
+            Horas de la jornada laboral
+            <input id="employeeEditWorkdayHours" type="number" step="0.5" min="1" max="24" placeholder="8" />
+          </label>
+        </div>
+
+        <div class="employee-modal-actions">
+          <button id="cancelEmployeeEdit" class="btn btn-secondary" type="button">Cancelar</button>
+          <button id="saveEmployeeEdit" class="btn btn-primary" type="button">Guardar</button>
+        </div>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2'"></script>
