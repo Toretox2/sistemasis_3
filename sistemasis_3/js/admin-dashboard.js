@@ -224,7 +224,7 @@ function bindEmployeeModal() {
     const employee = row?.employees || {};
 
     document.getElementById('employeeEditId').value = employeeId;
-    document.getElementById('employeeEditDailyPay').value = employee.pago_por_dia ?? employee.salario_base ?? 0;
+    document.getElementById('employeeEditDailyPay').value = employee.salario_base ?? 0;
     document.getElementById('employeeEditWorkdayHours').value = employee.horas_jornada || 8;
 
     modal.classList.add('is-open');
@@ -243,8 +243,8 @@ function bindEmployeeModal() {
   saveButton.addEventListener('click', async () => {
     const supabase = window.AuraTechSupabase;
     const employeeId = document.getElementById('employeeEditId').value;
-    const dailyPay = Number(document.getElementById('employeeEditDailyPay').value || 0);
-    const workdayHours = Number(document.getElementById('employeeEditWorkdayHours').value || 8);
+    const salarioBase = Number(document.getElementById('employeeEditDailyPay').value || 0);
+    const horasJornada = Number(document.getElementById('employeeEditWorkdayHours').value || 8);
 
     if (!supabase || !employeeId) {
       return;
@@ -254,8 +254,8 @@ function bindEmployeeModal() {
       const { error } = await supabase
         .from('employees')
         .update({
-          pago_por_dia: dailyPay,
-          horas_jornada: workdayHours,
+          salario_base: salarioBase,
+          horas_jornada: horasJornada,
         })
         .eq('id', employeeId);
 
@@ -264,6 +264,7 @@ function bindEmployeeModal() {
       }
 
       closeModal();
+      alert('Cambios guardados correctamente.');
       await loadDashboardData();
     } catch (error) {
       console.error('Error al guardar los cambios del empleado:', error);
@@ -586,14 +587,18 @@ function renderDashboard() {
       const statusClass =
         status === 'falta' ? 'absent' : status === 'retardo' ? 'late' : 'present';
       const empleado = row.employees || {};
-      const horasTrabajadas = Number(row.horas_trabajadas || 0);
-      const horasJornada = Number(empleado.horas_jornada || 8);
-      let regularHours = horasTrabajadas > horasJornada ? horasJornada : horasTrabajadas;
-      let overtimeHours = horasTrabajadas > horasJornada ? horasTrabajadas - horasJornada : 0;
-      const totalHours = Number(row.horas_trabajadas || 0);
-      const breakdown = buildPaymentBreakdown(row.employees, totalHours, status);
+      const salarioBase = parseFloat(empleado.salario_base) || 0;
+      const horasJornada = parseFloat(empleado.horas_jornada) || 8;
+      const horasTrabajadas = parseFloat(row.horas_trabajadas) || 0;
+      const dailyRate = salarioBase / 30;
+      const hourlyRate = dailyRate / horasJornada;
+      const regularHours = Math.min(horasTrabajadas, horasJornada);
+      const extraHours = Math.max(0, horasTrabajadas - horasJornada);
+      const pagoRegular = regularHours * hourlyRate;
+      const pagoExtra = extraHours * (hourlyRate * 1.5);
+      const pagoTotal = pagoRegular + pagoExtra;
       const absences = status === 'falta' ? 1 : 0;
-      const payEstimate = formatCurrency(breakdown.totalPay);
+      const payEstimate = formatCurrency(pagoTotal);
 
       return `
         <tr>
