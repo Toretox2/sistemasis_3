@@ -3,6 +3,7 @@ const dashboardState = {
   filteredRows: [],
   payrollHistory: [],
   selectedHistoryId: null,
+  historyPeriodId: null,
   currentPage: 1,
   pageSize: 5,
   currency: 'GTQ',
@@ -166,23 +167,16 @@ async function loadDashboardData() {
 
 async function loadPayrollHistory() {
   const supabase = window.AuraTechSupabase;
-  const selector = document.getElementById('payrollHistorySelector');
+  const historyList = document.getElementById('payrollHistoryList');
 
-  if (!supabase || !selector) {
+  if (!supabase || !historyList) {
     return;
   }
 
   try {
     const { data, error } = await supabase
-      .from('payroll_history')
-      .select(`
-        *,
-        employees:employee_id (
-          id,
-          nombre,
-          cargo
-        )
-      `)
+      .from('payroll_periods')
+      .select('*')
       .order('fecha_fin', { ascending: false });
 
     if (error) {
@@ -190,42 +184,55 @@ async function loadPayrollHistory() {
     }
 
     dashboardState.payrollHistory = data || [];
-    populatePayrollHistoryOptions(dashboardState.payrollHistory);
-    if (!dashboardState.selectedHistoryId) {
-      selector.value = 'live';
-    }
+    renderPayrollHistoryList(dashboardState.payrollHistory);
   } catch (error) {
     console.error('Error al cargar el historial de pagos:', error);
     dashboardState.payrollHistory = [];
-    populatePayrollHistoryOptions([]);
+    renderPayrollHistoryList([]);
   }
 }
 
-function populatePayrollHistoryOptions(historyRows) {
-  const selector = document.getElementById('payrollHistorySelector');
+function renderPayrollHistoryList(historyRows) {
+  const historyList = document.getElementById('payrollHistoryList');
 
-  if (!selector) {
+  if (!historyList) {
     return;
   }
 
-  const options = historyRows
+  if (!historyRows.length) {
+    historyList.innerHTML = '<div class="history-card"><p style="margin:0; color: var(--color-muted);">No hay cierres guardados todavía.</p></div>';
+    return;
+  }
+
+  historyList.innerHTML = historyRows
     .slice()
     .sort((a, b) => new Date(b.fecha_fin) - new Date(a.fecha_fin))
-    .map((item) => `
-      <option value="${item.id}">${buildPayrollHistoryLabel(item)}</option>
+    .map((period) => `
+      <article class="history-card">
+        <div class="history-card-header">
+          <div>
+            <h4 class="history-title">${period.nombre_periodo}</h4>
+            <div class="history-range">${formatShortDate(period.fecha_inicio)} - ${formatShortDate(period.fecha_fin)}</div>
+          </div>
+          <span class="history-total">${formatCurrency(period.total_pagado || 0)}</span>
+        </div>
+        <div class="history-meta">
+          <span>${period.periodo_tipo === 'quincenal' ? 'Quincenal' : 'Mensual'}</span>
+          <span>${formatDate(period.fecha_fin)}</span>
+        </div>
+        <div class="history-actions">
+          <button class="history-detail-btn" type="button" data-period-id="${period.id}">Ver Detalle</button>
+        </div>
+      </article>
     `)
     .join('');
 
-  selector.innerHTML = `
-    <option value="live">Periodo actual</option>
-    ${options}
-  `;
-
-  if (dashboardState.selectedHistoryId) {
-    selector.value = dashboardState.selectedHistoryId;
-  } else {
-    selector.value = 'live';
-  }
+  historyList.querySelectorAll('.history-detail-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const periodId = button.dataset.periodId;
+      openPayrollHistoryDetail(periodId);
+    });
+  });
 }
 
 function getPayrollPeriodRange(periodType = 'quincenal', referenceDate = new Date()) {
@@ -255,18 +262,17 @@ function getPayrollPeriodRange(periodType = 'quincenal', referenceDate = new Dat
 
 function buildPayrollHistoryLabel(record) {
   const startDate = new Date(record.fecha_inicio + 'T00:00:00');
-  const endDate = new Date(record.fecha_fin + 'T00:00:00');
   const monthLabel = new Intl.DateTimeFormat('es-ES', {
     month: 'long',
     year: 'numeric',
   }).format(startDate);
 
   if (record.periodo_tipo === 'quincenal') {
-    const descriptor = startDate.getDate() <= 15 ? '1ra' : '2da';
-    return `${descriptor} Quincena ${monthLabel} (${formatShortDate(record.fecha_inicio)} - ${formatShortDate(record.fecha_fin)})`;
+    const descriptor = new Date(record.fecha_inicio + 'T00:00:00').getDate() <= 15 ? '1ra' : '2da';
+    return `${descriptor} Quincena ${monthLabel}`;
   }
 
-  return `Mes ${monthLabel} (${formatShortDate(record.fecha_inicio)} - ${formatShortDate(record.fecha_fin)})`;
+  return `Mes ${monthLabel}`;
 }
 
 function formatShortDate(dateString) {
@@ -277,6 +283,45 @@ function formatShortDate(dateString) {
     day: '2-digit',
     month: '2-digit',
   });
+}
+
+function openPayrollHistoryDetail(periodId) {
+  const modal = document.getElementById('historyDetailModal');
+  const tableBody = document.getElementById('historyDetailTableBody');
+  const summary = document.getElementById('historyDetailSummary');
+
+  if (!modal || !tableBody || !summary) {
+    return;
+  }
+
+  const period = dashboardState.payrollHistory.find((item) => item.id === periodId);
+
+  if (!period) {
+    return;
+  }
+
+  const snapshot = Array.isArray(period.snapshot) ? period.snapshot : [];
+  summary.textContent = `${period.nombre_periodo} • ${formatShortDate(period.fecha_inicio)} - ${formatShortDate(period.fecha_fin)}`;
+
+  tableBody.innerHTML = snapshot.length
+    ? snapshot.map((entry) => `
+      <tr>
+        <td>${entry.employee_name || 'Empleado no encontrado'}</td>
+        <td>${entry.department || 'Sin departamento'}</td>
+        <td>${formatCurrency(entry.pago_por_hora || 0)}</td>
+        <td>${Number((entry.horas_trabajadas || 0).toFixed(1))}h</td>
+        <td>${entry.asistencias || 0}</td>
+        <td>${entry.faltas || 0}</td>
+        <td>${formatCurrency(entry.pago_por_horas || 0)}</td>
+        <td>${Number((entry.horas_extra || 0).toFixed(1))}h</td>
+        <td>${Number((entry.horas_faltantes || 0).toFixed(1))}h</td>
+        <td>${formatCurrency(entry.total_pagado || 0)}</td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="10" style="text-align:center; color: var(--color-muted); padding: 2rem;">Sin detalle disponible para este período.</td></tr>';
+
+  modal.classList.add('is-open');
+  modal.setAttribute('aria-hidden', 'false');
 }
 
 function bindFilters() {
@@ -323,7 +368,6 @@ function bindCurrencySelector() {
 }
 
 function bindPayrollHistoryControls() {
-  const historySelector = document.getElementById('payrollHistorySelector');
   const closePayrollButton = document.getElementById('closePayrollPeriodBtn');
   const modal = document.getElementById('closePayrollPeriodModal');
   const cancelButton = document.getElementById('cancelClosePayrollPeriod');
@@ -332,8 +376,10 @@ function bindPayrollHistoryControls() {
   const typeSelector = document.getElementById('closePayrollType');
   const startDate = document.getElementById('closePayrollStartDate');
   const endDate = document.getElementById('closePayrollEndDate');
+  const historyModal = document.getElementById('historyDetailModal');
+  const closeHistoryButton = document.getElementById('closeHistoryDetail');
 
-  if (!historySelector || !closePayrollButton || !modal || !cancelButton || !closeButton || !confirmButton) {
+  if (!closePayrollButton || !modal || !cancelButton || !closeButton || !confirmButton) {
     return;
   }
 
@@ -364,14 +410,23 @@ function bindPayrollHistoryControls() {
     }
   });
 
-  historySelector.addEventListener('change', (event) => {
-    dashboardState.selectedHistoryId = event.target.value === 'live' ? null : event.target.value;
-    renderPayrollView();
-  });
-
   typeSelector.addEventListener('change', () => {
     syncPeriodFields();
   });
+
+  if (historyModal && closeHistoryButton) {
+    closeHistoryButton.addEventListener('click', () => {
+      historyModal.classList.remove('is-open');
+      historyModal.setAttribute('aria-hidden', 'true');
+    });
+
+    historyModal.addEventListener('click', (event) => {
+      if (event.target === historyModal) {
+        historyModal.classList.remove('is-open');
+        historyModal.setAttribute('aria-hidden', 'true');
+      }
+    });
+  }
 
   confirmButton.addEventListener('click', async () => {
     const selectedType = typeSelector.value;
@@ -898,39 +953,6 @@ function renderPayrollView() {
   const tableBody = document.getElementById('payrollTableBody');
   if (!tableBody) return;
 
-  const selectedHistoryId = dashboardState.selectedHistoryId;
-
-  if (selectedHistoryId) {
-    const historyRows = dashboardState.payrollHistory.filter((entry) => entry.id === selectedHistoryId);
-
-    if (!historyRows.length) {
-      tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; color: var(--color-muted); padding: 2rem;">Sin historiales disponibles para este periodo.</td></tr>';
-      return;
-    }
-
-    tableBody.innerHTML = historyRows.map((entry) => {
-      const employeeName = entry.employees?.nombre || 'Empleado no encontrado';
-      const department = entry.employees?.cargo || 'Sin departamento';
-
-      return `
-        <tr>
-          <td>${employeeName}</td>
-          <td>${department}</td>
-          <td>${formatCurrency(entry.pago_por_hora || 0)}</td>
-          <td>${Number((entry.horas_trabajadas || 0).toFixed(1))}h</td>
-          <td>${entry.asistencias || 0}</td>
-          <td>${entry.faltas || 0}</td>
-          <td>${formatCurrency(entry.pago_por_horas || entry.total_pagado || 0)}</td>
-          <td>${Number((entry.horas_extra || 0).toFixed(1))}h</td>
-          <td>${Number((entry.horas_faltantes || 0).toFixed(1))}h</td>
-          <td>${formatCurrency(entry.total_pagado || 0)}</td>
-        </tr>
-      `;
-    }).join('');
-
-    return;
-  }
-
   const rows = dashboardState.filteredRows.length ? dashboardState.filteredRows : dashboardState.allRows;
   const employeeMap = new Map();
 
@@ -1357,13 +1379,18 @@ async function closePayrollPeriod(periodType, startDate, endDate) {
     entry.hourlyRate = breakdown.hourlyRate || entry.hourlyRate || 0;
   });
 
-  const payload = Array.from(employeeMap.values()).map((entry) => ({
-    employee_id: entry.employee_id,
+  const periodName = buildPayrollHistoryLabel({
     periodo_tipo: periodType,
     fecha_inicio: startDate,
     fecha_fin: endDate,
-    pago_por_hora: entry.hourlyRate,
-    pago_por_horas: entry.totalPay,
+  });
+
+  const snapshot = Array.from(employeeMap.values()).map((entry) => ({
+    employee_id: entry.employee_id,
+    employee_name: entry.employee_name,
+    department: entry.department,
+    pago_por_hora: Number(entry.hourlyRate.toFixed(2)),
+    pago_por_horas: Number(entry.totalPay.toFixed(2)),
     horas_trabajadas: Number(entry.hoursWorked.toFixed(2)),
     horas_extra: Number(entry.hoursExtra.toFixed(2)),
     horas_faltantes: Number(entry.hoursMissing.toFixed(2)),
@@ -1372,14 +1399,57 @@ async function closePayrollPeriod(periodType, startDate, endDate) {
     total_pagado: Number(entry.totalPay.toFixed(2)),
   }));
 
-  const { error } = await supabase
+  const totalPagado = snapshot.reduce((sum, item) => sum + Number(item.total_pagado || 0), 0);
+
+  const { data: periodData, error: periodError } = await supabase
+    .from('payroll_periods')
+    .upsert({
+      nombre_periodo: periodName,
+      periodo_tipo: periodType,
+      fecha_inicio: startDate,
+      fecha_fin: endDate,
+      total_pagado: Number(totalPagado.toFixed(2)),
+      snapshot,
+    }, {
+      onConflict: 'periodo_tipo,fecha_inicio,fecha_fin',
+    })
+    .select('id')
+    .single();
+
+  if (periodError) {
+    throw periodError;
+  }
+
+  const periodId = periodData?.id;
+
+  if (!periodId) {
+    throw new Error('No se pudo obtener el identificador del periodo cerrado.');
+  }
+
+  const historyPayload = snapshot.map((entry) => ({
+    period_id: periodId,
+    employee_id: entry.employee_id,
+    periodo_tipo: periodType,
+    fecha_inicio: startDate,
+    fecha_fin: endDate,
+    pago_por_hora: entry.pago_por_hora,
+    pago_por_horas: entry.pago_por_horas,
+    horas_trabajadas: entry.horas_trabajadas,
+    horas_extra: entry.horas_extra,
+    horas_faltantes: entry.horas_faltantes,
+    asistencias: entry.asistencias,
+    faltas: entry.faltas,
+    total_pagado: entry.total_pagado,
+  }));
+
+  const { error: historyError } = await supabase
     .from('payroll_history')
-    .upsert(payload, {
-      onConflict: 'employee_id,periodo_tipo,fecha_inicio,fecha_fin',
+    .upsert(historyPayload, {
+      onConflict: 'period_id,employee_id',
     });
 
-  if (error) {
-    throw error;
+  if (historyError) {
+    throw historyError;
   }
 
   await loadPayrollHistory();

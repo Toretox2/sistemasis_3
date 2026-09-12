@@ -81,8 +81,48 @@ CREATE POLICY "Public can complete attendance"
     USING (true)
     WITH CHECK (true);
 
+CREATE TABLE IF NOT EXISTS public.payroll_periods (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre_periodo TEXT NOT NULL,
+    periodo_tipo TEXT NOT NULL CHECK (periodo_tipo IN ('quincenal', 'mensual')),
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    total_pagado NUMERIC(12,2) NOT NULL DEFAULT 0,
+    snapshot JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (periodo_tipo, fecha_inicio, fecha_fin)
+);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_periods_fecha
+    ON public.payroll_periods(fecha_fin DESC);
+
+ALTER TABLE public.payroll_periods ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can read payroll periods" ON public.payroll_periods;
+CREATE POLICY "Public can read payroll periods"
+    ON public.payroll_periods
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "Public can insert payroll periods" ON public.payroll_periods;
+CREATE POLICY "Public can insert payroll periods"
+    ON public.payroll_periods
+    FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can update payroll periods" ON public.payroll_periods;
+CREATE POLICY "Public can update payroll periods"
+    ON public.payroll_periods
+    FOR UPDATE
+    TO anon, authenticated
+    USING (true)
+    WITH CHECK (true);
+
 CREATE TABLE IF NOT EXISTS public.payroll_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    period_id UUID REFERENCES public.payroll_periods(id) ON DELETE CASCADE,
     employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
     periodo_tipo TEXT NOT NULL CHECK (periodo_tipo IN ('quincenal', 'mensual')),
     fecha_inicio DATE NOT NULL,
@@ -95,15 +135,20 @@ CREATE TABLE IF NOT EXISTS public.payroll_history (
     asistencias INTEGER NOT NULL DEFAULT 0,
     faltas INTEGER NOT NULL DEFAULT 0,
     total_pagado NUMERIC(12,2) NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (employee_id, periodo_tipo, fecha_inicio, fecha_fin)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_payroll_history_period_id
+    ON public.payroll_history(period_id);
 
 CREATE INDEX IF NOT EXISTS idx_payroll_history_employee_id
     ON public.payroll_history(employee_id);
 
 CREATE INDEX IF NOT EXISTS idx_payroll_history_periodo
     ON public.payroll_history(periodo_tipo, fecha_inicio, fecha_fin);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_payroll_history_period_employee
+    ON public.payroll_history(period_id, employee_id);
 
 ALTER TABLE public.payroll_history ENABLE ROW LEVEL SECURITY;
 

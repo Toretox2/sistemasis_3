@@ -526,6 +526,84 @@
         margin-top: 1.5rem;
       }
 
+      .history-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
+        padding: 1.2rem;
+      }
+
+      .history-card {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbfd 100%);
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 18px;
+        padding: 1rem;
+        box-shadow: 0 10px 24px rgba(11, 19, 43, 0.04);
+      }
+
+      .history-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.8rem;
+      }
+
+      .history-title {
+        margin: 0;
+        font-size: 0.98rem;
+        color: var(--color-primary);
+        font-weight: 700;
+      }
+
+      .history-range {
+        margin-top: 0.25rem;
+        color: var(--color-muted);
+        font-size: 0.82rem;
+      }
+
+      .history-total {
+        background: rgba(71, 168, 189, 0.12);
+        color: var(--color-primary);
+        border-radius: 999px;
+        padding: 0.38rem 0.7rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .history-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        color: var(--color-muted);
+        font-size: 0.8rem;
+        padding-top: 0.7rem;
+        border-top: 1px solid rgba(11, 19, 43, 0.06);
+      }
+
+      .history-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 1rem;
+      }
+
+      .history-detail-btn {
+        border: 1px solid rgba(11, 19, 43, 0.12);
+        background: rgba(71, 168, 189, 0.08);
+        color: var(--color-primary);
+        border-radius: 10px;
+        padding: 0.55rem 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.25s ease;
+      }
+
+      .history-detail-btn:hover {
+        background: rgba(71, 168, 189, 0.18);
+        transform: translateY(-1px);
+      }
+
       @media (max-width: 900px) {
         .app-shell {
           flex-direction: column;
@@ -757,11 +835,6 @@
           <section class="panel">
             <div class="panel-header">
               <h3>Pagos</h3>
-              <div class="panel-tools">
-                <select id="payrollHistorySelector" class="mini-select" aria-label="Seleccionar historial de pagos">
-                  <option value="live">Periodo actual</option>
-                </select>
-              </div>
             </div>
             <div class="table-wrap">
               <table>
@@ -782,6 +855,13 @@
                 <tbody id="payrollTableBody"></tbody>
               </table>
             </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Historial de Cierres</h3>
+            </div>
+            <div id="payrollHistoryList" class="history-list"></div>
           </section>
         </section>
 
@@ -864,6 +944,38 @@
         <div class="employee-modal-actions">
           <button id="cancelClosePayrollPeriod" class="btn btn-secondary" type="button">Cancelar</button>
           <button id="confirmClosePayrollPeriod" class="btn btn-primary" type="button">Guardar cierre</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="historyDetailModal" class="employee-modal-backdrop" aria-hidden="true">
+      <div class="employee-modal" role="dialog" aria-modal="true" aria-labelledby="historyDetailTitle" style="width: min(960px, 100%);">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+          <div>
+            <h3 id="historyDetailTitle">Detalle del cierre</h3>
+            <div id="historyDetailSummary" style="color: var(--color-muted); margin-top: 0.3rem; font-size: 0.9rem;">Periodo</div>
+          </div>
+          <button id="closeHistoryDetail" class="edit-employee-btn" type="button" aria-label="Cerrar">✕</button>
+        </div>
+
+        <div class="table-wrap" style="margin-top: 1rem;">
+          <table>
+            <thead>
+              <tr>
+                <th>Empleado</th>
+                <th>Departamento</th>
+                <th>Pago por Hora</th>
+                <th>Horas Trabajadas</th>
+                <th>Asistencias</th>
+                <th>Faltas</th>
+                <th>Pago por Horas</th>
+                <th>Horas Extra</th>
+                <th>Horas Faltantes</th>
+                <th>Total a Pagar</th>
+              </tr>
+            </thead>
+            <tbody id="historyDetailTableBody"></tbody>
+          </table>
         </div>
       </div>
     </div>
