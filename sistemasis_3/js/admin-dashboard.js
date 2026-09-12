@@ -758,10 +758,10 @@ function renderPayrollView() {
     <tr>
       <td>${employee.name}</td>
       <td>${employee.department}</td>
+      <td>${formatCurrency(employee.hourlyRate)}</td>
       <td>${Number(employee.hoursWorked.toFixed(1))}h</td>
       <td>${employee.attendance}</td>
       <td>${employee.absences}</td>
-      <td>${formatCurrency(employee.hourlyRate)}</td>
       <td>${formatCurrency(employee.payForHours)}</td>
       <td>${Number(employee.hoursExtra.toFixed(1))}h</td>
       <td>${Number(Math.max(0, employee.missingHours).toFixed(1))}h</td>
