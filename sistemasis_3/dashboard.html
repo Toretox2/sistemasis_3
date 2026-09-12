@@ -596,6 +596,7 @@
               <option value="EUR">EUR (Euros)</option>
               <option value="GTQ" selected>GTQ (Quetzales)</option>
             </select>
+            <button id="closePayrollPeriodBtn" class="filter-chip" type="button">Cerrar Periodo (Quincena/Mes)</button>
             <button id="exportPayrollBtn" class="action-btn" type="button">Exportar Planilla a Excel</button>
           </div>
         </header>
@@ -756,6 +757,11 @@
           <section class="panel">
             <div class="panel-header">
               <h3>Pagos</h3>
+              <div class="panel-tools">
+                <select id="payrollHistorySelector" class="mini-select" aria-label="Seleccionar historial de pagos">
+                  <option value="live">Periodo actual</option>
+                </select>
+              </div>
             </div>
             <div class="table-wrap">
               <table>
@@ -826,6 +832,40 @@
           </section>
         </section>
       </main>
+    </div>
+
+    <div id="closePayrollPeriodModal" class="employee-modal-backdrop" aria-hidden="true">
+      <div class="employee-modal" role="dialog" aria-modal="true" aria-labelledby="closePayrollPeriodTitle">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+          <h3 id="closePayrollPeriodTitle">Cerrar periodo</h3>
+          <button id="closeClosePayrollPeriod" class="edit-employee-btn" type="button" aria-label="Cerrar">✕</button>
+        </div>
+
+        <div class="employee-modal-grid">
+          <label>
+            Tipo de cierre
+            <select id="closePayrollType" class="mini-select" aria-label="Seleccionar tipo de cierre">
+              <option value="quincenal">Quincenal</option>
+              <option value="mensual">Mensual</option>
+            </select>
+          </label>
+
+          <label>
+            Fecha inicio
+            <input id="closePayrollStartDate" type="date" />
+          </label>
+
+          <label>
+            Fecha fin
+            <input id="closePayrollEndDate" type="date" />
+          </label>
+        </div>
+
+        <div class="employee-modal-actions">
+          <button id="cancelClosePayrollPeriod" class="btn btn-secondary" type="button">Cancelar</button>
+          <button id="confirmClosePayrollPeriod" class="btn btn-primary" type="button">Guardar cierre</button>
+        </div>
+      </div>
     </div>
 
     <div id="employeeEditModal" class="employee-modal-backdrop" aria-hidden="true">

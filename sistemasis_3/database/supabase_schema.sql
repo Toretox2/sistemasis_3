@@ -80,3 +80,51 @@ CREATE POLICY "Public can complete attendance"
     TO anon, authenticated
     USING (true)
     WITH CHECK (true);
+
+CREATE TABLE IF NOT EXISTS public.payroll_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
+    periodo_tipo TEXT NOT NULL CHECK (periodo_tipo IN ('quincenal', 'mensual')),
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    pago_por_hora NUMERIC(12,2) NOT NULL DEFAULT 0,
+    pago_por_horas NUMERIC(12,2) NOT NULL DEFAULT 0,
+    horas_trabajadas NUMERIC(7,2) NOT NULL DEFAULT 0,
+    horas_extra NUMERIC(7,2) NOT NULL DEFAULT 0,
+    horas_faltantes NUMERIC(7,2) NOT NULL DEFAULT 0,
+    asistencias INTEGER NOT NULL DEFAULT 0,
+    faltas INTEGER NOT NULL DEFAULT 0,
+    total_pagado NUMERIC(12,2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (employee_id, periodo_tipo, fecha_inicio, fecha_fin)
+);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_history_employee_id
+    ON public.payroll_history(employee_id);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_history_periodo
+    ON public.payroll_history(periodo_tipo, fecha_inicio, fecha_fin);
+
+ALTER TABLE public.payroll_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can read payroll history" ON public.payroll_history;
+CREATE POLICY "Public can read payroll history"
+    ON public.payroll_history
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "Public can insert payroll history" ON public.payroll_history;
+CREATE POLICY "Public can insert payroll history"
+    ON public.payroll_history
+    FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can update payroll history" ON public.payroll_history;
+CREATE POLICY "Public can update payroll history"
+    ON public.payroll_history
+    FOR UPDATE
+    TO anon, authenticated
+    USING (true)
+    WITH CHECK (true);

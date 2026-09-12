@@ -1,6 +1,8 @@
 const dashboardState = {
   allRows: [],
   filteredRows: [],
+  payrollHistory: [],
+  selectedHistoryId: null,
   currentPage: 1,
   pageSize: 5,
   currency: 'GTQ',
@@ -105,7 +107,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindNavigation();
   bindCurrencySelector();
   bindEmployeeModal();
+  bindPayrollHistoryControls();
   await loadDashboardData();
+  await loadPayrollHistory();
   renderPerformanceSummary();
 });
 
@@ -160,6 +164,86 @@ async function loadDashboardData() {
   }
 }
 
+async function loadPayrollHistory() {
+  const supabase = window.AuraTechSupabase;
+  const selector = document.getElementById('payrollHistorySelector');
+
+  if (!supabase || !selector) {
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('payroll_history')
+      .select(`
+        *,
+        employees:employee_id (
+          id,
+          nombre,
+          cargo
+        )
+      `)
+      .order('fecha_fin', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    dashboardState.payrollHistory = data || [];
+    populatePayrollHistoryOptions(dashboardState.payrollHistory);
+    if (!dashboardState.selectedHistoryId) {
+      selector.value = 'live';
+    }
+  } catch (error) {
+    console.error('Error al cargar el historial de pagos:', error);
+    dashboardState.payrollHistory = [];
+    populatePayrollHistoryOptions([]);
+  }
+}
+
+function populatePayrollHistoryOptions(historyRows) {
+  const selector = document.getElementById('payrollHistorySelector');
+
+  if (!selector) {
+    return;
+  }
+
+  const options = historyRows
+    .slice()
+    .sort((a, b) => new Date(b.fecha_fin) - new Date(a.fecha_fin))
+    .map((item) => `
+      <option value="${item.id}">${buildPayrollHistoryLabel(item)}</option>
+    `)
+    .join('');
+
+  selector.innerHTML = `
+    <option value="live">Periodo actual</option>
+    ${options}
+  `;
+
+  if (dashboardState.selectedHistoryId) {
+    selector.value = dashboardState.selectedHistoryId;
+  } else {
+    selector.value = 'live';
+  }
+}
+
+function buildPayrollHistoryLabel(record) {
+  const startDate = new Date(record.fecha_inicio + 'T00:00:00');
+  const endDate = new Date(record.fecha_fin + 'T00:00:00');
+  const monthLabel = new Intl.DateTimeFormat('es-ES', {
+    month: 'long',
+    year: 'numeric',
+  }).format(startDate);
+
+  if (record.periodo_tipo === 'quincenal') {
+    const descriptor = startDate.getDate() <= 15 ? '1ra' : '2da';
+    return `${descriptor} Quincena ${monthLabel}`;
+  }
+
+  return `Mes ${monthLabel}`;
+}
+
 function bindFilters() {
   const dateFilter = document.getElementById('dateFilter');
   const employeeFilter = document.getElementById('employeeFilter');
@@ -200,6 +284,97 @@ function bindCurrencySelector() {
   currencySelector.addEventListener('change', (event) => {
     dashboardState.currency = event.target.value;
     renderDashboard();
+  });
+}
+
+function bindPayrollHistoryControls() {
+  const historySelector = document.getElementById('payrollHistorySelector');
+  const closePayrollButton = document.getElementById('closePayrollPeriodBtn');
+  const modal = document.getElementById('closePayrollPeriodModal');
+  const cancelButton = document.getElementById('cancelClosePayrollPeriod');
+  const closeButton = document.getElementById('closeClosePayrollPeriod');
+  const confirmButton = document.getElementById('confirmClosePayrollPeriod');
+  const typeSelector = document.getElementById('closePayrollType');
+  const startDate = document.getElementById('closePayrollStartDate');
+  const endDate = document.getElementById('closePayrollEndDate');
+
+  if (!historySelector || !closePayrollButton || !modal || !cancelButton || !closeButton || !confirmButton) {
+    return;
+  }
+
+  const openModal = () => {
+    if (!startDate.value) {
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      startDate.value = toISODate(start);
+      endDate.value = toISODate(end);
+    }
+
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  };
+
+  const closeModal = () => {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+  };
+
+  closePayrollButton.addEventListener('click', openModal);
+  cancelButton.addEventListener('click', closeModal);
+  closeButton.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  historySelector.addEventListener('change', (event) => {
+    dashboardState.selectedHistoryId = event.target.value === 'live' ? null : event.target.value;
+    renderPayrollView();
+  });
+
+  typeSelector.addEventListener('change', () => {
+    if (!startDate.value || !endDate.value) {
+      return;
+    }
+
+    const start = new Date(startDate.value + 'T00:00:00');
+    const end = new Date(endDate.value + 'T00:00:00');
+
+    if (typeSelector.value === 'quincenal') {
+      const firstHalfStart = new Date(start.getFullYear(), start.getMonth(), 1);
+      const firstHalfEnd = new Date(start.getFullYear(), start.getMonth(), 15);
+      startDate.value = toISODate(firstHalfStart);
+      endDate.value = toISODate(firstHalfEnd);
+      return;
+    }
+
+    const monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
+    const monthEnd = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+    startDate.value = toISODate(monthStart);
+    endDate.value = toISODate(monthEnd);
+  });
+
+  confirmButton.addEventListener('click', async () => {
+    const selectedType = typeSelector.value;
+    const selectedStart = startDate.value;
+    const selectedEnd = endDate.value;
+
+    if (!selectedStart || !selectedEnd || selectedStart > selectedEnd) {
+      showToast('Selecciona un rango de fechas válido.');
+      return;
+    }
+
+    try {
+      await closePayrollPeriod(selectedType, selectedStart, selectedEnd);
+      closeModal();
+      showToast('Periodo cerrado y guardado en el historial.');
+    } catch (error) {
+      console.error('Error al cerrar el periodo:', error);
+      showToast('No se pudo cerrar el periodo. Intenta nuevamente.');
+    }
   });
 }
 
@@ -707,6 +882,39 @@ function renderPayrollView() {
   const tableBody = document.getElementById('payrollTableBody');
   if (!tableBody) return;
 
+  const selectedHistoryId = dashboardState.selectedHistoryId;
+
+  if (selectedHistoryId) {
+    const historyRows = dashboardState.payrollHistory.filter((entry) => entry.id === selectedHistoryId);
+
+    if (!historyRows.length) {
+      tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; color: var(--color-muted); padding: 2rem;">Sin historiales disponibles para este periodo.</td></tr>';
+      return;
+    }
+
+    tableBody.innerHTML = historyRows.map((entry) => {
+      const employeeName = entry.employees?.nombre || 'Empleado no encontrado';
+      const department = entry.employees?.cargo || 'Sin departamento';
+
+      return `
+        <tr>
+          <td>${employeeName}</td>
+          <td>${department}</td>
+          <td>${formatCurrency(entry.pago_por_hora || 0)}</td>
+          <td>${Number((entry.horas_trabajadas || 0).toFixed(1))}h</td>
+          <td>${entry.asistencias || 0}</td>
+          <td>${entry.faltas || 0}</td>
+          <td>${formatCurrency(entry.pago_por_horas || entry.total_pagado || 0)}</td>
+          <td>${Number((entry.horas_extra || 0).toFixed(1))}h</td>
+          <td>${Number((entry.horas_faltantes || 0).toFixed(1))}h</td>
+          <td>${formatCurrency(entry.total_pagado || 0)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return;
+  }
+
   const rows = dashboardState.filteredRows.length ? dashboardState.filteredRows : dashboardState.allRows;
   const employeeMap = new Map();
 
@@ -1071,6 +1279,94 @@ function showToast(message) {
       toast.remove();
     }, 300);
   }, 3000);
+}
+
+async function closePayrollPeriod(periodType, startDate, endDate) {
+  const supabase = window.AuraTechSupabase;
+
+  if (!supabase) {
+    throw new Error('Supabase no está inicializado.');
+  }
+
+  const rows = dashboardState.allRows.filter((row) => {
+    if (!row.fecha) {
+      return false;
+    }
+
+    return row.fecha >= startDate && row.fecha <= endDate;
+  });
+
+  if (!rows.length) {
+    throw new Error('No hay registros para cerrar en el rango seleccionado.');
+  }
+
+  const employeeMap = new Map();
+
+  rows.forEach((row) => {
+    const employeeData = row.employees || {};
+    const employeeId = row.employee_id || employeeData.id || employeeData.nombre;
+
+    if (!employeeId) {
+      return;
+    }
+
+    if (!employeeMap.has(employeeId)) {
+      employeeMap.set(employeeId, {
+        employee_id: employeeId,
+        employee_name: employeeData.nombre || 'Empleado no encontrado',
+        department: employeeData.cargo || 'Sin departamento',
+        hourlyRate: Number(employeeData.salario_base || 0) > 0
+          ? Number(employeeData.salario_base || 0) / 30 / Number(employeeData.horas_jornada || 8)
+          : 0,
+        hoursWorked: 0,
+        hoursExtra: 0,
+        hoursMissing: 0,
+        totalPay: 0,
+        asistencias: 0,
+        faltas: 0,
+      });
+    }
+
+    const entry = employeeMap.get(employeeId);
+    const breakdown = buildPaymentBreakdown(employeeData, Number(row.horas_trabajadas || 0), row.estado);
+    const hoursWorked = Number(row.horas_trabajadas || 0);
+    const workdayHours = Number(employeeData.horas_jornada || 8);
+
+    entry.hoursWorked += hoursWorked;
+    entry.hoursExtra += breakdown.overtimeHours;
+    entry.hoursMissing += Math.max(0, workdayHours - hoursWorked);
+    entry.totalPay += breakdown.totalPay;
+    entry.asistencias += row.estado === 'falta' ? 0 : 1;
+    entry.faltas += row.estado === 'falta' ? 1 : 0;
+    entry.hourlyRate = breakdown.hourlyRate || entry.hourlyRate || 0;
+  });
+
+  const payload = Array.from(employeeMap.values()).map((entry) => ({
+    employee_id: entry.employee_id,
+    periodo_tipo: periodType,
+    fecha_inicio: startDate,
+    fecha_fin: endDate,
+    pago_por_hora: entry.hourlyRate,
+    pago_por_horas: entry.totalPay,
+    horas_trabajadas: Number(entry.hoursWorked.toFixed(2)),
+    horas_extra: Number(entry.hoursExtra.toFixed(2)),
+    horas_faltantes: Number(entry.hoursMissing.toFixed(2)),
+    asistencias: entry.asistencias,
+    faltas: entry.faltas,
+    total_pagado: Number(entry.totalPay.toFixed(2)),
+  }));
+
+  const { error } = await supabase
+    .from('payroll_history')
+    .upsert(payload, {
+      onConflict: 'employee_id,periodo_tipo,fecha_inicio,fecha_fin',
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  await loadPayrollHistory();
 }
 
 function buildPayrollExport(rows) {
