@@ -109,8 +109,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindCurrencySelector();
   bindEmployeeModal();
   bindPayrollHistoryControls();
+  bindWorkScheduleForm();
+  bindReturnToScanner();
   await loadDashboardData();
   await loadPayrollHistory();
+  await loadWorkScheduleSettings();
   renderPerformanceSummary();
 });
 
@@ -134,6 +137,7 @@ function switchView(viewName) {
     summary: 'Resumen General',
     employees: 'Empleados',
     payroll: 'Pagos',
+    schedules: 'Horarios',
     reports: 'Reportes',
   };
 
@@ -530,6 +534,139 @@ function bindEmployeeModal() {
     if (employeeId) {
       openModal(employeeId);
     }
+  });
+}
+
+async function loadWorkScheduleSettings() {
+  const supabase = window.AuraTechSupabase;
+
+  if (!supabase) {
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('company_settings')
+    .select('*')
+    .eq('setting_key', 'work_schedule')
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error al cargar configuración de horarios:', error);
+    return;
+  }
+
+  if (!data) {
+    return;
+  }
+
+  const entryTimeInput = document.getElementById('scheduleEntryTime');
+  const exitTimeInput = document.getElementById('scheduleExitTime');
+  const toleranceInput = document.getElementById('scheduleToleranceMinutes');
+
+  if (entryTimeInput && data.hora_entrada_oficial) {
+    entryTimeInput.value = data.hora_entrada_oficial;
+  }
+
+  if (exitTimeInput && data.hora_salida_oficial) {
+    exitTimeInput.value = data.hora_salida_oficial;
+  }
+
+  if (toleranceInput && data.margen_tolerancia_minutos !== undefined && data.margen_tolerancia_minutos !== null) {
+    toleranceInput.value = data.margen_tolerancia_minutos;
+  }
+}
+
+function bindWorkScheduleForm() {
+  const form = document.getElementById('workScheduleForm');
+  const resetButton = document.getElementById('resetWorkScheduleBtn');
+
+  if (!form) {
+    return;
+  }
+
+  const setDefaultValues = () => {
+    const entryTimeInput = document.getElementById('scheduleEntryTime');
+    const exitTimeInput = document.getElementById('scheduleExitTime');
+    const toleranceInput = document.getElementById('scheduleToleranceMinutes');
+
+    if (entryTimeInput) entryTimeInput.value = '08:00';
+    if (exitTimeInput) exitTimeInput.value = '17:00';
+    if (toleranceInput) toleranceInput.value = '10';
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const supabase = window.AuraTechSupabase;
+
+    if (!supabase) {
+      showToast('La conexión con Supabase no está disponible.');
+      return;
+    }
+
+    const payload = {
+      setting_key: 'work_schedule',
+      hora_entrada_oficial: document.getElementById('scheduleEntryTime')?.value || '08:00',
+      hora_salida_oficial: document.getElementById('scheduleExitTime')?.value || '17:00',
+      margen_tolerancia_minutos: Number(document.getElementById('scheduleToleranceMinutes')?.value || 10),
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .upsert(payload, { onConflict: 'setting_key' })
+        .select('*');
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length) {
+        showToast('Configuración de horarios guardada correctamente.');
+      }
+    } catch (error) {
+      console.error('Error al guardar configuración de horarios:', error);
+      showToast('No se pudo guardar la configuración.');
+    }
+  });
+
+  if (resetButton) {
+    resetButton.addEventListener('click', () => {
+      setDefaultValues();
+      showToast('Valores restablecidos.');
+    });
+  }
+}
+
+function bindReturnToScanner() {
+  const returnButton = document.getElementById('returnToScannerBtn');
+
+  if (!returnButton) {
+    return;
+  }
+
+  returnButton.addEventListener('click', async () => {
+    const supabase = window.AuraTechSupabase;
+
+    try {
+      if (supabase?.auth) {
+        await supabase.auth.signOut();
+      }
+    } catch (error) {
+      console.warn('No se pudo cerrar sesión en Supabase:', error);
+    }
+
+    localStorage.removeItem('supabase.auth.token');
+    sessionStorage.clear();
+    document.cookie.split(';').forEach((cookie) => {
+      const name = cookie.trim().split('=')[0];
+      if (name) {
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      }
+    });
+
+    window.location.href = './index.html';
   });
 }
 

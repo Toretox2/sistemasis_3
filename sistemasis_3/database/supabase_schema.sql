@@ -120,6 +120,39 @@ CREATE POLICY "Public can update payroll periods"
     USING (true)
     WITH CHECK (true);
 
+CREATE TABLE IF NOT EXISTS public.company_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    setting_key TEXT NOT NULL UNIQUE,
+    hora_entrada_oficial TIME NOT NULL DEFAULT '08:00',
+    hora_salida_oficial TIME NOT NULL DEFAULT '17:00',
+    margen_tolerancia_minutos INTEGER NOT NULL DEFAULT 10,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.company_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can read company settings" ON public.company_settings;
+CREATE POLICY "Public can read company settings"
+    ON public.company_settings
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "Public can insert company settings" ON public.company_settings;
+CREATE POLICY "Public can insert company settings"
+    ON public.company_settings
+    FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can update company settings" ON public.company_settings;
+CREATE POLICY "Public can update company settings"
+    ON public.company_settings
+    FOR UPDATE
+    TO anon, authenticated
+    USING (true)
+    WITH CHECK (true);
+
 CREATE TABLE IF NOT EXISTS public.payroll_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     period_id UUID REFERENCES public.payroll_periods(id) ON DELETE CASCADE,
