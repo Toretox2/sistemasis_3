@@ -194,10 +194,14 @@ CREATE POLICY "Public can delete work shifts"
     USING (true);
 
 ALTER TABLE public.employees
-    ADD COLUMN IF NOT EXISTS shift_id UUID REFERENCES public.work_shifts(id) ON DELETE SET NULL;
+    ADD COLUMN IF NOT EXISTS shift_id UUID REFERENCES public.work_shifts(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS tipo_horario TEXT NOT NULL DEFAULT 'personalizado';
 
 CREATE INDEX IF NOT EXISTS idx_employees_shift_id
     ON public.employees(shift_id);
+
+CREATE INDEX IF NOT EXISTS idx_employees_tipo_horario
+    ON public.employees(tipo_horario);
 
 CREATE TABLE IF NOT EXISTS public.payroll_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

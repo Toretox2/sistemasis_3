@@ -137,6 +137,51 @@
         color: var(--color-primary);
       }
 
+      .general-schedule-assignment {
+        margin-top: 1.2rem;
+        padding: 1rem 1.2rem 0;
+        border-top: 1px solid rgba(11, 19, 43, 0.08);
+      }
+
+      .general-schedule-assignment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .general-schedule-assignment-header h4 {
+        margin: 0;
+        color: var(--color-primary);
+      }
+
+      .general-schedule-employee-list {
+        display: grid;
+        gap: 0.65rem;
+        max-height: 180px;
+        overflow-y: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px;
+        background: #f8fafc;
+      }
+
+      .general-schedule-employee-item {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.65rem 0.75rem;
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 10px;
+        background: #ffffff;
+      }
+
+      .general-schedule-employee-item input {
+        accent-color: var(--color-accent);
+      }
+
       .shift-list {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1072,6 +1117,18 @@
                   Margen de tolerancia (minutos)
                   <input id="scheduleToleranceMinutes" type="number" min="0" max="120" step="1" value="10" />
                 </label>
+              </div>
+
+              <div class="general-schedule-assignment">
+                <div class="general-schedule-assignment-header">
+                  <h4>Asignación de empleados</h4>
+                  <label style="display:flex; align-items:center; gap:0.5rem; color: var(--color-primary); font-weight:600;">
+                    <input id="selectAllGeneralScheduleEmployees" type="checkbox" />
+                    Seleccionar a todos
+                  </label>
+                </div>
+
+                <div id="generalScheduleEmployeeList" class="general-schedule-employee-list"></div>
               </div>
 
               <div class="employee-modal-actions" style="padding: 0 1.2rem 1.2rem; justify-content: flex-end;">

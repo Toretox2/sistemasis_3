@@ -564,24 +564,82 @@ async function loadWorkScheduleSettings() {
     return;
   }
 
-  if (!data) {
-    return;
-  }
-
   const entryTimeInput = document.getElementById('scheduleEntryTime');
   const exitTimeInput = document.getElementById('scheduleExitTime');
   const toleranceInput = document.getElementById('scheduleToleranceMinutes');
 
-  if (entryTimeInput && data.hora_entrada_oficial) {
+  if (entryTimeInput && data?.hora_entrada_oficial) {
     entryTimeInput.value = data.hora_entrada_oficial;
   }
 
-  if (exitTimeInput && data.hora_salida_oficial) {
+  if (exitTimeInput && data?.hora_salida_oficial) {
     exitTimeInput.value = data.hora_salida_oficial;
   }
 
-  if (toleranceInput && data.margen_tolerancia_minutos !== undefined && data.margen_tolerancia_minutos !== null) {
+  if (toleranceInput && data?.margen_tolerancia_minutos !== undefined && data?.margen_tolerancia_minutos !== null) {
     toleranceInput.value = data.margen_tolerancia_minutos;
+  }
+
+  await renderGeneralScheduleEmployeeSelection();
+}
+
+async function renderGeneralScheduleEmployeeSelection() {
+  const employeeList = document.getElementById('generalScheduleEmployeeList');
+  const selectAllCheckbox = document.getElementById('selectAllGeneralScheduleEmployees');
+
+  if (!employeeList || !selectAllCheckbox) {
+    return;
+  }
+
+  const supabase = window.AuraTechSupabase;
+
+  if (!supabase) {
+    employeeList.innerHTML = '<p style="margin:0; color: var(--color-muted);">No se pudo cargar la lista de empleados.</p>';
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
+    return;
+  }
+
+  try {
+    const { data: employees, error: employeesError } = await supabase
+      .from('employees')
+      .select('id, nombre, cargo, tipo_horario')
+      .order('nombre', { ascending: true });
+
+    if (employeesError) {
+      throw employeesError;
+    }
+
+    employeeList.innerHTML = (employees || []).map((employee) => `
+      <label class="general-schedule-employee-item">
+        <input type="checkbox" name="generalScheduleEmployee" value="${employee.id}" ${employee.tipo_horario === 'general' ? 'checked' : ''} />
+        <span>
+          <strong>${employee.nombre}</strong><br />
+          <small style="color: var(--color-muted);">${employee.cargo || 'Sin departamento'}</small>
+        </span>
+      </label>
+    `).join('');
+
+    const checkboxes = Array.from(
+      employeeList.querySelectorAll('input[name="generalScheduleEmployee"]')
+    );
+
+    if (!checkboxes.length) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+      return;
+    }
+
+    const allChecked = checkboxes.every((checkbox) => checkbox.checked);
+    const someChecked = checkboxes.some((checkbox) => checkbox.checked);
+
+    selectAllCheckbox.checked = allChecked;
+    selectAllCheckbox.indeterminate = someChecked && !allChecked;
+  } catch (error) {
+    console.error('Error al renderizar empleados para horario general:', error);
+    employeeList.innerHTML = '<p style="margin:0; color: var(--color-muted);">No se pudo cargar la asignación de empleados.</p>';
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
   }
 }
 
@@ -666,10 +724,34 @@ function renderShiftCards(shifts) {
 function bindWorkScheduleForm() {
   const form = document.getElementById('workScheduleForm');
   const resetButton = document.getElementById('resetWorkScheduleBtn');
+  const selectAllCheckbox = document.getElementById('selectAllGeneralScheduleEmployees');
+  const employeeList = document.getElementById('generalScheduleEmployeeList');
 
   if (!form) {
     return;
   }
+
+  const updateSelectAllState = () => {
+    if (!employeeList || !selectAllCheckbox) {
+      return;
+    }
+
+    const checkboxes = Array.from(
+      employeeList.querySelectorAll('input[name="generalScheduleEmployee"]')
+    );
+
+    if (!checkboxes.length) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+      return;
+    }
+
+    const allChecked = checkboxes.every((checkbox) => checkbox.checked);
+    const someChecked = checkboxes.some((checkbox) => checkbox.checked);
+
+    selectAllCheckbox.checked = allChecked;
+    selectAllCheckbox.indeterminate = someChecked && !allChecked;
+  };
 
   const setDefaultValues = () => {
     const entryTimeInput = document.getElementById('scheduleEntryTime');
@@ -680,6 +762,28 @@ function bindWorkScheduleForm() {
     if (exitTimeInput) exitTimeInput.value = '17:00';
     if (toleranceInput) toleranceInput.value = '10';
   };
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', () => {
+      if (!employeeList) {
+        return;
+      }
+
+      const checkboxes = employeeList.querySelectorAll('input[name="generalScheduleEmployee"]');
+      checkboxes.forEach((checkbox) => {
+        checkbox.checked = selectAllCheckbox.checked;
+      });
+      updateSelectAllState();
+    });
+  }
+
+  if (employeeList) {
+    employeeList.addEventListener('change', (event) => {
+      if (event.target.matches('input[name="generalScheduleEmployee"]')) {
+        updateSelectAllState();
+      }
+    });
+  }
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -699,6 +803,10 @@ function bindWorkScheduleForm() {
       updated_at: new Date().toISOString(),
     };
 
+    const selectedEmployeeIds = employeeList
+      ? Array.from(employeeList.querySelectorAll('input[name="generalScheduleEmployee"]:checked')).map((checkbox) => checkbox.value)
+      : [];
+
     try {
       const { data, error } = await supabase
         .from('company_settings')
@@ -709,9 +817,30 @@ function bindWorkScheduleForm() {
         throw error;
       }
 
+      const { error: resetError } = await supabase
+        .from('employees')
+        .update({ tipo_horario: 'personalizado' });
+
+      if (resetError) {
+        throw resetError;
+      }
+
+      if (selectedEmployeeIds.length) {
+        const { error: assignError } = await supabase
+          .from('employees')
+          .update({ tipo_horario: 'general' })
+          .in('id', selectedEmployeeIds);
+
+        if (assignError) {
+          throw assignError;
+        }
+      }
+
       if (data && data.length) {
         showToast('Configuración de horarios guardada correctamente.');
       }
+
+      await renderGeneralScheduleEmployeeSelection();
     } catch (error) {
       console.error('Error al guardar configuración de horarios:', error);
       showToast('No se pudo guardar la configuración.');
@@ -1666,7 +1795,7 @@ async function fetchEmployees() {
 
   const { data, error } = await supabase
     .from('employees')
-    .select('id, nombre, cargo, salario_base, horas_jornada, shift_id');
+    .select('id, nombre, cargo, salario_base, horas_jornada, shift_id, tipo_horario');
 
   if (error) {
     throw error;
