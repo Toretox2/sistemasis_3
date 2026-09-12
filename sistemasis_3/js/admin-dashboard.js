@@ -228,6 +228,31 @@ function populatePayrollHistoryOptions(historyRows) {
   }
 }
 
+function getPayrollPeriodRange(periodType = 'quincenal', referenceDate = new Date()) {
+  const currentDate = new Date(referenceDate);
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  if (periodType === 'mensual') {
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0);
+
+    return {
+      fecha_inicio: toISODate(start),
+      fecha_fin: toISODate(end),
+    };
+  }
+
+  const day = currentDate.getDate();
+  const start = new Date(year, month, day <= 15 ? 1 : 16);
+  const end = new Date(year, month, day <= 15 ? 15 : new Date(year, month + 1, 0).getDate());
+
+  return {
+    fecha_inicio: toISODate(start),
+    fecha_fin: toISODate(end),
+  };
+}
+
 function buildPayrollHistoryLabel(record) {
   const startDate = new Date(record.fecha_inicio + 'T00:00:00');
   const endDate = new Date(record.fecha_fin + 'T00:00:00');
@@ -238,10 +263,20 @@ function buildPayrollHistoryLabel(record) {
 
   if (record.periodo_tipo === 'quincenal') {
     const descriptor = startDate.getDate() <= 15 ? '1ra' : '2da';
-    return `${descriptor} Quincena ${monthLabel}`;
+    return `${descriptor} Quincena ${monthLabel} (${formatShortDate(record.fecha_inicio)} - ${formatShortDate(record.fecha_fin)})`;
   }
 
-  return `Mes ${monthLabel}`;
+  return `Mes ${monthLabel} (${formatShortDate(record.fecha_inicio)} - ${formatShortDate(record.fecha_fin)})`;
+}
+
+function formatShortDate(dateString) {
+  if (!dateString) return '—';
+
+  const date = new Date(dateString + 'T00:00:00');
+  return date.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+  });
 }
 
 function bindFilters() {
@@ -302,15 +337,14 @@ function bindPayrollHistoryControls() {
     return;
   }
 
-  const openModal = () => {
-    if (!startDate.value) {
-      const today = new Date();
-      const start = new Date(today.getFullYear(), today.getMonth(), 1);
-      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      startDate.value = toISODate(start);
-      endDate.value = toISODate(end);
-    }
+  const syncPeriodFields = () => {
+    const range = getPayrollPeriodRange(typeSelector.value, new Date());
+    startDate.value = range.fecha_inicio;
+    endDate.value = range.fecha_fin;
+  };
 
+  const openModal = () => {
+    syncPeriodFields();
     modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');
   };
@@ -336,25 +370,7 @@ function bindPayrollHistoryControls() {
   });
 
   typeSelector.addEventListener('change', () => {
-    if (!startDate.value || !endDate.value) {
-      return;
-    }
-
-    const start = new Date(startDate.value + 'T00:00:00');
-    const end = new Date(endDate.value + 'T00:00:00');
-
-    if (typeSelector.value === 'quincenal') {
-      const firstHalfStart = new Date(start.getFullYear(), start.getMonth(), 1);
-      const firstHalfEnd = new Date(start.getFullYear(), start.getMonth(), 15);
-      startDate.value = toISODate(firstHalfStart);
-      endDate.value = toISODate(firstHalfEnd);
-      return;
-    }
-
-    const monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
-    const monthEnd = new Date(start.getFullYear(), start.getMonth() + 1, 0);
-    startDate.value = toISODate(monthStart);
-    endDate.value = toISODate(monthEnd);
+    syncPeriodFields();
   });
 
   confirmButton.addEventListener('click', async () => {
