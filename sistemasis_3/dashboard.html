@@ -137,6 +137,108 @@
         color: var(--color-primary);
       }
 
+      .shift-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
+        padding: 1.1rem 1.2rem 1.2rem;
+      }
+
+      .shift-card {
+        background: linear-gradient(180deg, #ffffff 0%, #f7fbfd 100%);
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 16px;
+        padding: 1rem;
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .shift-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+
+      .shift-card h4 {
+        margin: 0;
+        color: var(--color-primary);
+      }
+
+      .shift-badge {
+        background: rgba(71, 168, 189, 0.10);
+        color: var(--color-primary);
+        border-radius: 999px;
+        padding: 0.35rem 0.6rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+      }
+
+      .shift-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        color: var(--color-muted);
+        font-size: 0.85rem;
+      }
+
+      .shift-meta span {
+        background: rgba(11, 19, 43, 0.04);
+        border-radius: 999px;
+        padding: 0.25rem 0.55rem;
+      }
+
+      .shift-action-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+      }
+
+      .shift-action-btn {
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 10px;
+        background: white;
+        color: var(--color-primary);
+        padding: 0.55rem 0.8rem;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .shift-action-btn.danger {
+        border-color: rgba(185, 28, 28, 0.25);
+        color: #b91c1c;
+        background: rgba(239, 68, 68, 0.04);
+      }
+
+      .shift-assignment-list {
+        display: grid;
+        gap: 0.65rem;
+        max-height: 260px;
+        overflow-y: auto;
+        padding-right: 0.25rem;
+      }
+
+      .shift-assignment-item {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.7rem 0.75rem;
+        border: 1px solid rgba(11, 19, 43, 0.08);
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+
+      .shift-assignment-item input {
+        accent-color: var(--color-accent);
+      }
+
+      .shift-header-actions {
+        display: flex;
+        justify-content: flex-end;
+        padding: 0 1.2rem 1.2rem;
+      }
+
       .nav-badge {
         min-width: 28px;
         height: 28px;
@@ -916,7 +1018,7 @@
         <section id="view-schedules" class="view-panel">
           <section class="panel">
             <div class="panel-header">
-              <h3>Configuración de turnos</h3>
+              <h3>Configuración general</h3>
             </div>
 
             <form id="workScheduleForm">
@@ -942,6 +1044,18 @@
                 <button class="btn btn-primary" type="submit">Guardar configuración</button>
               </div>
             </form>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h3>Gestión de turnos</h3>
+            </div>
+
+            <div class="shift-header-actions">
+              <button id="createShiftBtn" class="btn btn-primary" type="button">Crear Nuevo Horario</button>
+            </div>
+
+            <div id="workShiftList" class="shift-list"></div>
           </section>
         </section>
 
@@ -1060,6 +1174,57 @@
       </div>
     </div>
 
+    <div id="shiftModal" class="employee-modal-backdrop" aria-hidden="true">
+      <div class="employee-modal" role="dialog" aria-modal="true" aria-labelledby="shiftModalTitle" style="width: min(900px, 100%);">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+          <h3 id="shiftModalTitle">Crear horario</h3>
+          <button id="closeShiftModal" class="edit-employee-btn" type="button" aria-label="Cerrar">✕</button>
+        </div>
+
+        <form id="shiftForm">
+          <input id="shiftId" type="hidden" />
+
+          <div class="employee-modal-grid" style="margin-top: 1rem;">
+            <label>
+              Nombre del turno
+              <input id="shiftName" type="text" placeholder="Ej. Turno Mañana" required />
+            </label>
+
+            <label>
+              Hora de entrada
+              <input id="shiftEntryTime" type="time" value="08:00" required />
+            </label>
+
+            <label>
+              Hora de salida
+              <input id="shiftExitTime" type="time" value="17:00" required />
+            </label>
+
+            <label>
+              Tolerancia (minutos)
+              <input id="shiftToleranceMinutes" type="number" min="0" max="120" step="1" value="10" required />
+            </label>
+          </div>
+
+          <div style="margin-top: 1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+              <h4 style="margin:0; color: var(--color-primary);">Asignación de empleados</h4>
+              <label style="display:flex; align-items:center; gap:0.5rem; color: var(--color-primary); font-weight:600;">
+                <input id="selectAllShiftEmployees" type="checkbox" />
+                Seleccionar a todos
+              </label>
+            </div>
+            <div id="shiftEmployeeList" class="shift-assignment-list"></div>
+          </div>
+
+          <div class="employee-modal-actions">
+            <button id="cancelShiftModal" class="btn btn-secondary" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Guardar horario</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div id="employeeEditModal" class="employee-modal-backdrop" aria-hidden="true">
       <div class="employee-modal" role="dialog" aria-modal="true" aria-labelledby="employeeModalTitle">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
@@ -1078,6 +1243,13 @@
           <label>
             Horas de la jornada laboral
             <input id="employeeEditWorkdayHours" type="number" step="0.5" min="1" max="24" placeholder="8" />
+          </label>
+
+          <label>
+            Turno asignado
+            <select id="employeeEditShiftId" class="mini-select" aria-label="Seleccionar turno del empleado">
+              <option value="">Sin turno asignado</option>
+            </select>
           </label>
         </div>
 

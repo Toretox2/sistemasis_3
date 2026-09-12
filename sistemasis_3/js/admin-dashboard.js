@@ -110,10 +110,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindEmployeeModal();
   bindPayrollHistoryControls();
   bindWorkScheduleForm();
+  bindShiftManagement();
   bindReturnToScanner();
   await loadDashboardData();
   await loadPayrollHistory();
   await loadWorkScheduleSettings();
+  await loadShifts();
   renderPerformanceSummary();
 });
 
@@ -472,10 +474,15 @@ function bindEmployeeModal() {
     const allRows = dashboardState.filteredRows.length ? dashboardState.filteredRows : dashboardState.allRows;
     const row = allRows.find((item) => (item.employee_id || item.employees?.id) === employeeId) || allRows[0];
     const employee = row?.employees || {};
+    const shiftSelect = document.getElementById('employeeEditShiftId');
 
     document.getElementById('employeeEditId').value = employeeId;
     document.getElementById('employeeEditDailyPay').value = employee.salario_base ?? 0;
     document.getElementById('employeeEditWorkdayHours').value = employee.horas_jornada || 8;
+
+    if (shiftSelect) {
+      shiftSelect.value = employee.shift_id || '';
+    }
 
     modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');
@@ -495,6 +502,7 @@ function bindEmployeeModal() {
     const employeeId = document.getElementById('employeeEditId').value;
     const salarioBase = Number(document.getElementById('employeeEditDailyPay').value || 0);
     const horasJornada = Number(document.getElementById('employeeEditWorkdayHours').value || 8);
+    const shiftId = document.getElementById('employeeEditShiftId')?.value || null;
 
     if (!supabase || !employeeId) {
       return;
@@ -506,6 +514,7 @@ function bindEmployeeModal() {
         .update({
           salario_base: salarioBase,
           horas_jornada: horasJornada,
+          shift_id: shiftId,
         })
         .eq('id', employeeId);
 
@@ -576,6 +585,84 @@ async function loadWorkScheduleSettings() {
   }
 }
 
+async function loadShifts() {
+  const supabase = window.AuraTechSupabase;
+  const shiftList = document.getElementById('workShiftList');
+
+  if (!supabase || !shiftList) {
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('work_shifts')
+      .select('*')
+      .order('entry_time', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    dashboardState.shifts = data || [];
+    renderShiftCards(dashboardState.shifts);
+    populateShiftSelectorOptions(dashboardState.shifts);
+  } catch (error) {
+    console.error('Error al cargar los turnos:', error);
+    dashboardState.shifts = [];
+    renderShiftCards([]);
+    populateShiftSelectorOptions([]);
+  }
+}
+
+function renderShiftCards(shifts) {
+  const shiftList = document.getElementById('workShiftList');
+
+  if (!shiftList) {
+    return;
+  }
+
+  if (!shifts.length) {
+    shiftList.innerHTML = '<div class="shift-card"><p style="margin:0; color: var(--color-muted);">No hay turnos creados aún.</p></div>';
+    return;
+  }
+
+  shiftList.innerHTML = shifts.map((shift) => `
+    <article class="shift-card">
+      <div class="shift-card-header">
+        <div>
+          <h4>${shift.name}</h4>
+        </div>
+        <span class="shift-badge">Activo</span>
+      </div>
+
+      <div class="shift-meta">
+        <span>Entrada ${shift.entry_time}</span>
+        <span>Salida ${shift.exit_time}</span>
+        <span>Tolerancia ${shift.tolerance_minutes} min</span>
+      </div>
+
+      <div class="shift-action-row">
+        <button class="shift-action-btn" type="button" data-shift-action="edit" data-shift-id="${shift.id}">Editar</button>
+        <button class="shift-action-btn danger" type="button" data-shift-action="delete" data-shift-id="${shift.id}">Eliminar</button>
+      </div>
+    </article>
+  `).join('');
+
+  shiftList.querySelectorAll('[data-shift-action]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const shiftId = button.dataset.shiftId;
+      const action = button.dataset.shiftAction;
+
+      if (action === 'delete') {
+        await deleteShift(shiftId);
+        return;
+      }
+
+      openShiftModal(shiftId);
+    });
+  });
+}
+
 function bindWorkScheduleForm() {
   const form = document.getElementById('workScheduleForm');
   const resetButton = document.getElementById('resetWorkScheduleBtn');
@@ -637,6 +724,297 @@ function bindWorkScheduleForm() {
       showToast('Valores restablecidos.');
     });
   }
+}
+
+function bindShiftManagement() {
+  const createButton = document.getElementById('createShiftBtn');
+  const modal = document.getElementById('shiftModal');
+  const closeButton = document.getElementById('closeShiftModal');
+  const cancelButton = document.getElementById('cancelShiftModal');
+  const form = document.getElementById('shiftForm');
+  const shiftEmployeeList = document.getElementById('shiftEmployeeList');
+  const selectAllCheckbox = document.getElementById('selectAllShiftEmployees');
+
+  if (!createButton || !modal || !closeButton || !cancelButton || !form || !shiftEmployeeList || !selectAllCheckbox) {
+    return;
+  }
+
+  const closeModal = () => {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    form.reset();
+    document.getElementById('shiftId').value = '';
+    selectAllCheckbox.checked = false;
+    shiftEmployeeList.innerHTML = '';
+  };
+
+  createButton.addEventListener('click', () => {
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.getElementById('shiftModalTitle').textContent = 'Crear horario';
+    renderShiftEmployeeSelection();
+  });
+
+  closeButton.addEventListener('click', closeModal);
+  cancelButton.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  selectAllCheckbox.addEventListener('change', () => {
+    const checkboxes = shiftEmployeeList.querySelectorAll('input[type="checkbox"][name="shiftEmployee"]');
+    checkboxes.forEach((checkbox) => {
+      checkbox.checked = selectAllCheckbox.checked;
+    });
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const supabase = window.AuraTechSupabase;
+
+    if (!supabase) {
+      showToast('La conexión con Supabase no está disponible.');
+      return;
+    }
+
+    const shiftId = document.getElementById('shiftId').value;
+    const payload = {
+      name: document.getElementById('shiftName').value.trim(),
+      entry_time: document.getElementById('shiftEntryTime').value,
+      exit_time: document.getElementById('shiftExitTime').value,
+      tolerance_minutes: Number(document.getElementById('shiftToleranceMinutes').value || 0),
+    };
+
+    if (!payload.name || !payload.entry_time || !payload.exit_time) {
+      showToast('Completa todos los campos del horario.');
+      return;
+    }
+
+    try {
+      let result;
+
+      if (shiftId) {
+        result = await supabase
+          .from('work_shifts')
+          .update(payload)
+          .eq('id', shiftId)
+          .select('*');
+      } else {
+        result = await supabase
+          .from('work_shifts')
+          .insert(payload)
+          .select('*');
+      }
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      const createdOrUpdatedShift = result.data?.[0] || result.data;
+      const selectedEmployeeIds = Array.from(
+        shiftEmployeeList.querySelectorAll('input[type="checkbox"][name="shiftEmployee"]:checked')
+      ).map((checkbox) => checkbox.value);
+
+      if (createdOrUpdatedShift) {
+        await syncEmployeesToShift(createdOrUpdatedShift.id, selectedEmployeeIds);
+      }
+
+      await loadShifts();
+      closeModal();
+      showToast(shiftId ? 'Horario actualizado correctamente.' : 'Horario creado correctamente.');
+    } catch (error) {
+      console.error('Error al guardar el horario:', error);
+      showToast('No se pudo guardar el horario.');
+    }
+  });
+
+  renderShiftEmployeeSelection();
+}
+
+async function deleteShift(shiftId) {
+  const supabase = window.AuraTechSupabase;
+
+  if (!supabase || !shiftId) {
+    return;
+  }
+
+  const confirmed = window.confirm('¿Deseas eliminar este horario?');
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('work_shifts')
+      .delete()
+      .eq('id', shiftId);
+
+    if (error) {
+      throw error;
+    }
+
+    await loadShifts();
+    showToast('Horario eliminado correctamente.');
+  } catch (error) {
+    console.error('Error al eliminar horario:', error);
+    showToast('No se pudo eliminar el horario.');
+  }
+}
+
+async function openShiftModal(shiftId) {
+  const supabase = window.AuraTechSupabase;
+  const modal = document.getElementById('shiftModal');
+
+  if (!supabase || !modal) {
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('work_shifts')
+      .select('*')
+      .eq('id', shiftId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    document.getElementById('shiftModalTitle').textContent = 'Editar horario';
+    document.getElementById('shiftId').value = data.id;
+    document.getElementById('shiftName').value = data.name || '';
+    document.getElementById('shiftEntryTime').value = data.entry_time || '08:00';
+    document.getElementById('shiftExitTime').value = data.exit_time || '17:00';
+    document.getElementById('shiftToleranceMinutes').value = data.tolerance_minutes || 0;
+
+    renderShiftEmployeeSelection(data.id);
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+  } catch (error) {
+    console.error('Error al cargar horario:', error);
+    showToast('No se pudo cargar el horario.');
+  }
+}
+
+async function renderShiftEmployeeSelection(shiftId = null) {
+  const shiftEmployeeList = document.getElementById('shiftEmployeeList');
+  const selectAllCheckbox = document.getElementById('selectAllShiftEmployees');
+
+  if (!shiftEmployeeList || !selectAllCheckbox) {
+    return;
+  }
+
+  const supabase = window.AuraTechSupabase;
+
+  if (!supabase) {
+    shiftEmployeeList.innerHTML = '<p style="margin:0; color: var(--color-muted);">No se pudo cargar la lista de empleados.</p>';
+    return;
+  }
+
+  try {
+    const { data: employees, error: employeesError } = await supabase
+      .from('employees')
+      .select('id, nombre, cargo')
+      .order('nombre', { ascending: true });
+
+    if (employeesError) {
+      throw employeesError;
+    }
+
+    let assignedIds = [];
+
+    if (shiftId) {
+      const { data: assignedData, error: assignedError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('shift_id', shiftId);
+
+      if (assignedError) {
+        throw assignedError;
+      }
+
+      assignedIds = assignedData.map((employee) => employee.id);
+    }
+
+    shiftEmployeeList.innerHTML = (employees || []).map((employee) => `
+      <label class="shift-assignment-item">
+        <input type="checkbox" name="shiftEmployee" value="${employee.id}" ${assignedIds.includes(employee.id) ? 'checked' : ''} />
+        <span>
+          <strong>${employee.nombre}</strong><br />
+          <small style="color: var(--color-muted);">${employee.cargo || 'Sin departamento'}</small>
+        </span>
+      </label>
+    `).join('');
+
+    selectAllCheckbox.checked = false;
+  } catch (error) {
+    console.error('Error al renderizar asignación:', error);
+    shiftEmployeeList.innerHTML = '<p style="margin:0; color: var(--color-muted);">No se pudo cargar la asignación de empleados.</p>';
+  }
+}
+
+async function syncEmployeesToShift(shiftId, selectedEmployeeIds) {
+  const supabase = window.AuraTechSupabase;
+
+  if (!supabase || !shiftId) {
+    return;
+  }
+
+  try {
+    const { data: employees, error: employeesError } = await supabase
+      .from('employees')
+      .select('id, shift_id');
+
+    if (employeesError) {
+      throw employeesError;
+    }
+
+    const selectedSet = new Set(selectedEmployeeIds || []);
+
+    for (const employee of employees || []) {
+      const shouldAssign = selectedSet.has(employee.id);
+      if (shouldAssign && employee.shift_id !== shiftId) {
+        const { error } = await supabase
+          .from('employees')
+          .update({ shift_id: shiftId })
+          .eq('id', employee.id);
+
+        if (error) {
+          throw error;
+        }
+      }
+
+      if (!shouldAssign && employee.shift_id === shiftId) {
+        const { error } = await supabase
+          .from('employees')
+          .update({ shift_id: null })
+          .eq('id', employee.id);
+
+        if (error) {
+          throw error;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error al sincronizar empleados con horario:', error);
+    throw error;
+  }
+}
+
+function populateShiftSelectorOptions(shifts) {
+  const employeeEditShiftIdSelect = document.getElementById('employeeEditShiftId');
+
+  if (!employeeEditShiftIdSelect) {
+    return;
+  }
+
+  employeeEditShiftIdSelect.innerHTML = '<option value="">Sin turno asignado</option>' +
+    (shifts || []).map((shift) => `<option value="${shift.id}">${shift.name}</option>`).join('');
 }
 
 function bindReturnToScanner() {
@@ -1222,7 +1600,8 @@ async function fetchAttendanceWithEmployees() {
         nombre,
         cargo,
         salario_base,
-        horas_jornada
+        horas_jornada,
+        shift_id
       )
     `)
     .order('fecha', { ascending: false });
@@ -1243,7 +1622,7 @@ async function fetchEmployees() {
 
   const { data, error } = await supabase
     .from('employees')
-    .select('id, nombre, cargo, salario_base, horas_jornada');
+    .select('id, nombre, cargo, salario_base, horas_jornada, shift_id');
 
   if (error) {
     throw error;

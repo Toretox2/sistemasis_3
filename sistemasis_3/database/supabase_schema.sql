@@ -153,6 +153,52 @@ CREATE POLICY "Public can update company settings"
     USING (true)
     WITH CHECK (true);
 
+CREATE TABLE IF NOT EXISTS public.work_shifts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    entry_time TIME NOT NULL,
+    exit_time TIME NOT NULL,
+    tolerance_minutes INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.work_shifts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can read work shifts" ON public.work_shifts;
+CREATE POLICY "Public can read work shifts"
+    ON public.work_shifts
+    FOR SELECT
+    TO anon, authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "Public can insert work shifts" ON public.work_shifts;
+CREATE POLICY "Public can insert work shifts"
+    ON public.work_shifts
+    FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can update work shifts" ON public.work_shifts;
+CREATE POLICY "Public can update work shifts"
+    ON public.work_shifts
+    FOR UPDATE
+    TO anon, authenticated
+    USING (true)
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can delete work shifts" ON public.work_shifts;
+CREATE POLICY "Public can delete work shifts"
+    ON public.work_shifts
+    FOR DELETE
+    TO anon, authenticated
+    USING (true);
+
+ALTER TABLE public.employees
+    ADD COLUMN IF NOT EXISTS shift_id UUID REFERENCES public.work_shifts(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_employees_shift_id
+    ON public.employees(shift_id);
+
 CREATE TABLE IF NOT EXISTS public.payroll_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     period_id UUID REFERENCES public.payroll_periods(id) ON DELETE CASCADE,
