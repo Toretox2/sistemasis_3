@@ -214,7 +214,7 @@
       .shift-assignment-list {
         display: grid;
         gap: 0.65rem;
-        max-height: 260px;
+        max-height: 200px;
         overflow-y: auto;
         padding-right: 0.25rem;
       }
@@ -227,6 +227,41 @@
         border: 1px solid rgba(11, 19, 43, 0.08);
         border-radius: 10px;
         background: #f8fafc;
+      }
+
+      .shift-modal {
+        width: min(600px, calc(100% - 2rem));
+        max-height: 85vh;
+        overflow: hidden;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .shift-modal-header {
+        padding: 1.5rem 1.5rem 0;
+      }
+
+      .shift-modal-form {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .shift-modal-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem 1.5rem 0;
+      }
+
+      .shift-modal-actions {
+        position: sticky;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.96);
+        border-top: 1px solid rgba(11, 19, 43, 0.08);
+        padding: 1rem 1.5rem;
+        margin-top: 0;
       }
 
       .shift-assignment-item input {
@@ -1175,49 +1210,51 @@
     </div>
 
     <div id="shiftModal" class="employee-modal-backdrop" aria-hidden="true">
-      <div class="employee-modal" role="dialog" aria-modal="true" aria-labelledby="shiftModalTitle" style="width: min(900px, 100%);">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+      <div class="employee-modal shift-modal" role="dialog" aria-modal="true" aria-labelledby="shiftModalTitle">
+        <div class="shift-modal-header" style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
           <h3 id="shiftModalTitle">Crear horario</h3>
           <button id="closeShiftModal" class="edit-employee-btn" type="button" aria-label="Cerrar">✕</button>
         </div>
 
-        <form id="shiftForm">
+        <form id="shiftForm" class="shift-modal-form">
           <input id="shiftId" type="hidden" />
 
-          <div class="employee-modal-grid" style="margin-top: 1rem;">
-            <label>
-              Nombre del turno
-              <input id="shiftName" type="text" placeholder="Ej. Turno Mañana" required />
-            </label>
+          <div class="shift-modal-content">
+            <div class="employee-modal-grid">
+              <label>
+                Nombre del turno
+                <input id="shiftName" type="text" placeholder="Ej. Turno Mañana" required />
+              </label>
 
-            <label>
-              Hora de entrada
-              <input id="shiftEntryTime" type="time" value="08:00" required />
-            </label>
+              <label>
+                Hora de entrada
+                <input id="shiftEntryTime" type="time" value="08:00" required />
+              </label>
 
-            <label>
-              Hora de salida
-              <input id="shiftExitTime" type="time" value="17:00" required />
-            </label>
+              <label>
+                Hora de salida
+                <input id="shiftExitTime" type="time" value="17:00" required />
+              </label>
 
-            <label>
-              Tolerancia (minutos)
-              <input id="shiftToleranceMinutes" type="number" min="0" max="120" step="1" value="10" required />
-            </label>
-          </div>
-
-          <div style="margin-top: 1.25rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:0.75rem; flex-wrap:wrap;">
-              <h4 style="margin:0; color: var(--color-primary);">Asignación de empleados</h4>
-              <label style="display:flex; align-items:center; gap:0.5rem; color: var(--color-primary); font-weight:600;">
-                <input id="selectAllShiftEmployees" type="checkbox" />
-                Seleccionar a todos
+              <label>
+                Tolerancia (minutos)
+                <input id="shiftToleranceMinutes" type="number" min="0" max="120" step="1" value="10" required />
               </label>
             </div>
-            <div id="shiftEmployeeList" class="shift-assignment-list"></div>
+
+            <div style="margin-top: 1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+                <h4 style="margin:0; color: var(--color-primary);">Asignación de empleados</h4>
+                <label style="display:flex; align-items:center; gap:0.5rem; color: var(--color-primary); font-weight:600;">
+                  <input id="selectAllShiftEmployees" type="checkbox" />
+                  Seleccionar a todos
+                </label>
+              </div>
+              <div id="shiftEmployeeList" class="shift-assignment-list"></div>
+            </div>
           </div>
 
-          <div class="employee-modal-actions">
+          <div class="employee-modal-actions shift-modal-actions">
             <button id="cancelShiftModal" class="btn btn-secondary" type="button">Cancelar</button>
             <button class="btn btn-primary" type="submit">Guardar horario</button>
           </div>

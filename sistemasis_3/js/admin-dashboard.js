@@ -739,12 +739,31 @@ function bindShiftManagement() {
     return;
   }
 
+  const syncSelectAllShiftCheckboxState = () => {
+    const checkboxes = Array.from(
+      shiftEmployeeList.querySelectorAll('input[type="checkbox"][name="shiftEmployee"]')
+    );
+
+    if (!checkboxes.length) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+      return;
+    }
+
+    const allChecked = checkboxes.every((checkbox) => checkbox.checked);
+    const someChecked = checkboxes.some((checkbox) => checkbox.checked);
+
+    selectAllCheckbox.checked = allChecked;
+    selectAllCheckbox.indeterminate = someChecked && !allChecked;
+  };
+
   const closeModal = () => {
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
     form.reset();
     document.getElementById('shiftId').value = '';
     selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
     shiftEmployeeList.innerHTML = '';
   };
 
@@ -769,6 +788,13 @@ function bindShiftManagement() {
     checkboxes.forEach((checkbox) => {
       checkbox.checked = selectAllCheckbox.checked;
     });
+    syncSelectAllShiftCheckboxState();
+  });
+
+  shiftEmployeeList.addEventListener('change', (event) => {
+    if (event.target.matches('input[type="checkbox"][name="shiftEmployee"]')) {
+      syncSelectAllShiftCheckboxState();
+    }
   });
 
   form.addEventListener('submit', async (event) => {
@@ -913,6 +939,8 @@ async function renderShiftEmployeeSelection(shiftId = null) {
 
   if (!supabase) {
     shiftEmployeeList.innerHTML = '<p style="margin:0; color: var(--color-muted);">No se pudo cargar la lista de empleados.</p>';
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
     return;
   }
 
@@ -951,10 +979,26 @@ async function renderShiftEmployeeSelection(shiftId = null) {
       </label>
     `).join('');
 
-    selectAllCheckbox.checked = false;
+    const checkboxes = Array.from(
+      shiftEmployeeList.querySelectorAll('input[type="checkbox"][name="shiftEmployee"]')
+    );
+
+    if (!checkboxes.length) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+      return;
+    }
+
+    const allChecked = checkboxes.every((checkbox) => checkbox.checked);
+    const someChecked = checkboxes.some((checkbox) => checkbox.checked);
+
+    selectAllCheckbox.checked = allChecked;
+    selectAllCheckbox.indeterminate = someChecked && !allChecked;
   } catch (error) {
     console.error('Error al renderizar asignación:', error);
     shiftEmployeeList.innerHTML = '<p style="margin:0; color: var(--color-muted);">No se pudo cargar la asignación de empleados.</p>';
+    selectAllCheckbox.checked = false;
+    selectAllCheckbox.indeterminate = false;
   }
 }
 
