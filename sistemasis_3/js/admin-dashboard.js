@@ -612,7 +612,7 @@ async function renderGeneralScheduleEmployeeSelection() {
 
     employeeList.innerHTML = (employees || []).map((employee) => `
       <label class="general-schedule-employee-item">
-        <input type="checkbox" name="generalScheduleEmployee" value="${employee.id}" ${employee.tipo_horario === 'general' ? 'checked' : ''} />
+        <input type="checkbox" class="employee-checkbox" name="generalScheduleEmployee" value="${employee.id}" ${employee.tipo_horario === 'general' ? 'checked' : ''} />
         <span>
           <strong>${employee.nombre}</strong><br />
           <small style="color: var(--color-muted);">${employee.cargo || 'Sin departamento'}</small>
@@ -621,7 +621,7 @@ async function renderGeneralScheduleEmployeeSelection() {
     `).join('');
 
     const checkboxes = Array.from(
-      employeeList.querySelectorAll('input[name="generalScheduleEmployee"]')
+      employeeList.querySelectorAll('input.employee-checkbox')
     );
 
     if (!checkboxes.length) {
@@ -737,7 +737,7 @@ function bindWorkScheduleForm() {
     }
 
     const checkboxes = Array.from(
-      employeeList.querySelectorAll('input[name="generalScheduleEmployee"]')
+      employeeList.querySelectorAll('input.employee-checkbox')
     );
 
     if (!checkboxes.length) {
@@ -769,7 +769,7 @@ function bindWorkScheduleForm() {
         return;
       }
 
-      const checkboxes = employeeList.querySelectorAll('input[name="generalScheduleEmployee"]');
+      const checkboxes = employeeList.querySelectorAll('input.employee-checkbox');
       checkboxes.forEach((checkbox) => {
         checkbox.checked = selectAllCheckbox.checked;
       });
@@ -779,7 +779,7 @@ function bindWorkScheduleForm() {
 
   if (employeeList) {
     employeeList.addEventListener('change', (event) => {
-      if (event.target.matches('input[name="generalScheduleEmployee"]')) {
+      if (event.target.matches('input.employee-checkbox')) {
         updateSelectAllState();
       }
     });
@@ -805,11 +805,18 @@ function bindWorkScheduleForm() {
 
     const selectedEmployeeIds = employeeList
       ? Array.from(
-          employeeList.querySelectorAll('input[name="generalScheduleEmployee"]:checked')
+          employeeList.querySelectorAll('input.employee-checkbox:checked')
         )
-          .map((checkbox) => Number(checkbox.value))
+          .map((checkbox) => Number(checkbox.value || checkbox.dataset.id))
           .filter((id) => Number.isFinite(id))
       : [];
+
+    const checkboxesFound = employeeList
+      ? employeeList.querySelectorAll('input.employee-checkbox').length
+      : 0;
+
+    console.log('Checkboxes encontrados:', checkboxesFound);
+    console.log('IDs seleccionados:', selectedEmployeeIds);
 
     try {
       const { data, error } = await supabase
@@ -822,6 +829,7 @@ function bindWorkScheduleForm() {
       }
 
       if (!selectedEmployeeIds.length) {
+        console.log('No hay empleados seleccionados. Validación fallida.');
         showToast('Debe seleccionar al menos un empleado para guardar la configuración general de horarios.');
         return;
       }
