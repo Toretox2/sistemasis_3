@@ -804,7 +804,11 @@ function bindWorkScheduleForm() {
     };
 
     const selectedEmployeeIds = employeeList
-      ? Array.from(employeeList.querySelectorAll('input[name="generalScheduleEmployee"]:checked')).map((checkbox) => checkbox.value)
+      ? Array.from(
+          employeeList.querySelectorAll('input[name="generalScheduleEmployee"]:checked')
+        )
+          .map((checkbox) => Number(checkbox.value))
+          .filter((id) => Number.isFinite(id))
       : [];
 
     try {
@@ -817,23 +821,27 @@ function bindWorkScheduleForm() {
         throw error;
       }
 
+      if (!selectedEmployeeIds.length) {
+        showToast('Debe seleccionar al menos un empleado para guardar la configuración general de horarios.');
+        return;
+      }
+
       const { error: resetError } = await supabase
         .from('employees')
-        .update({ tipo_horario: 'personalizado' });
+        .update({ tipo_horario: 'personalizado' })
+        .neq('id', null);
 
       if (resetError) {
         throw resetError;
       }
 
-      if (selectedEmployeeIds.length) {
-        const { error: assignError } = await supabase
-          .from('employees')
-          .update({ tipo_horario: 'general' })
-          .in('id', selectedEmployeeIds);
+      const { error: assignError } = await supabase
+        .from('employees')
+        .update({ tipo_horario: 'general' })
+        .in('id', selectedEmployeeIds);
 
-        if (assignError) {
-          throw assignError;
-        }
+      if (assignError) {
+        throw assignError;
       }
 
       if (data && data.length) {

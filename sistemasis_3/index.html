@@ -129,9 +129,10 @@
 
       .attendance-body {
         display: grid;
-        grid-template-columns: 1.15fr 0.85fr;
-        gap: 1.6rem;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
         padding: 1.4rem;
+        align-items: stretch;
       }
 
       .scanner-panel {
@@ -278,12 +279,19 @@
         position: relative;
         z-index: 2;
         width: 100%;
+        max-width: 100%;
         min-height: clamp(280px, 48vh, 500px);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 0.75rem;
+        gap: 10px;
+        overflow: hidden;
+      }
+
+      #qr-reader > * {
+        width: 100%;
+        max-width: 100%;
       }
 
       #qr-reader video {
@@ -315,6 +323,21 @@
         padding: 0.6rem 0.8rem;
         margin-top: 0.5rem;
         transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      #qr-reader .html5-qrcode-select {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        border-radius: 8px !important;
+        border: 1px solid #334155 !important;
+        background: #1e293b !important;
+        color: #ffffff !important;
+        padding: 10px 12px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        display: block !important;
       }
 
       #qr-reader .html5-qrcode-button:hover,
@@ -505,6 +528,14 @@
         }
       }
 
+      @media (max-width: 992px) {
+        .attendance-body {
+          grid-template-columns: 1fr;
+          padding: 1rem;
+          gap: 18px;
+        }
+      }
+
       @media (max-width: 860px) {
         body {
           padding: 0.75rem;
@@ -519,11 +550,6 @@
           align-items: flex-start;
           gap: 1rem;
           padding: 1rem 1rem 0.9rem;
-        }
-
-        .attendance-body {
-          grid-template-columns: 1fr;
-          padding: 1rem;
         }
 
         .scanner-panel {
