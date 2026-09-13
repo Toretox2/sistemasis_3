@@ -803,7 +803,7 @@ function bindWorkScheduleForm() {
       updated_at: new Date().toISOString(),
     };
 
-    const selectedEmployeeIds = employeeList
+    const selectedIds = employeeList
       ? Array.from(
           employeeList.querySelectorAll('input.employee-checkbox:checked')
         )
@@ -816,7 +816,7 @@ function bindWorkScheduleForm() {
       : 0;
 
     console.log('Checkboxes encontrados:', checkboxesFound);
-    console.log('IDs seleccionados:', selectedEmployeeIds);
+    console.log('IDs seleccionados:', selectedIds);
 
     try {
       const { data, error } = await supabase
@@ -828,25 +828,39 @@ function bindWorkScheduleForm() {
         throw error;
       }
 
-      if (!selectedEmployeeIds.length) {
+      if (!selectedIds.length) {
         console.log('No hay empleados seleccionados. Validación fallida.');
         showToast('Debe seleccionar al menos un empleado para guardar la configuración general de horarios.');
         return;
       }
 
-      const { error: resetError } = await supabase
+      const { data: allEmployees, error: allEmployeesError } = await supabase
         .from('employees')
-        .update({ tipo_horario: 'personalizado' })
-        .neq('id', null);
+        .select('id');
 
-      if (resetError) {
-        throw resetError;
+      if (allEmployeesError) {
+        throw allEmployeesError;
+      }
+
+      const allEmployeeIds = (allEmployees || [])
+        .map((employee) => String(employee.id || '').trim())
+        .filter((id) => id.length > 0);
+
+      if (allEmployeeIds.length) {
+        const { error: resetError } = await supabase
+          .from('employees')
+          .update({ tipo_horario: 'personalizado' })
+          .in('id', allEmployeeIds);
+
+        if (resetError) {
+          throw resetError;
+        }
       }
 
       const { error: assignError } = await supabase
         .from('employees')
         .update({ tipo_horario: 'general' })
-        .in('id', selectedEmployeeIds);
+        .in('id', selectedIds);
 
       if (assignError) {
         throw assignError;
