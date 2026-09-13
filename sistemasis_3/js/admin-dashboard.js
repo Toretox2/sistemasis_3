@@ -341,7 +341,30 @@ function bindFilters() {
     return;
   }
 
-  const updateRows = () => {
+  const updateRows = async () => {
+    const dateValue = dateFilter.value;
+    const startValue = startDate?.value || '';
+    const endValue = endDate?.value || '';
+
+    if (dateValue === 'custom' && startValue && endValue) {
+      try {
+        const rows = await fetchAttendanceWithEmployees({
+          startDate: startValue,
+          endDate: endValue,
+        });
+
+        dashboardState.allRows = rows;
+        dashboardState.filteredRows = rows;
+        dashboardState.currentPage = 1;
+        renderDashboard();
+        return;
+      } catch (error) {
+        console.error('Error al recargar registros por rango personalizado:', error);
+        showToast('No se pudieron cargar los registros del rango seleccionado.');
+        return;
+      }
+    }
+
     dashboardState.currentPage = 1;
     const filtered = applyFilters();
     dashboardState.filteredRows = filtered;
@@ -1787,14 +1810,16 @@ function showEmptyTable(message) {
   }
 }
 
-async function fetchAttendanceWithEmployees() {
+async function fetchAttendanceWithEmployees(filters = {}) {
   const supabase = window.AuraTechSupabase;
 
   if (!supabase) {
     throw new Error('Supabase no está inicializado.');
   }
 
-  const { data, error } = await supabase
+  const { startDate, endDate } = filters;
+
+  let query = supabase
     .from('attendance_logs')
     .select(`
       *,
@@ -1808,6 +1833,12 @@ async function fetchAttendanceWithEmployees() {
       )
     `)
     .order('fecha', { ascending: false });
+
+  if (startDate && endDate) {
+    query = query.gte('fecha', startDate).lte('fecha', endDate);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw error;
