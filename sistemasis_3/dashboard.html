@@ -49,16 +49,16 @@
 
       .app-shell {
         display: flex;
+        width: 100vw;
         height: 100vh;
-        width: 100%;
+        overflow: hidden;
       }
 
       .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
+        position: relative;
         width: 260px;
-        height: 100vh;
+        min-width: 260px;
+        height: 100%;
         background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-2) 100%);
         color: #fff;
         padding: 1.3rem 0.9rem;
@@ -69,6 +69,7 @@
         border-right: 1px solid rgba(148, 163, 184, 0.14);
         box-shadow: 18px 0 36px rgba(15, 23, 42, 0.12);
         transition: transform 0.25s ease;
+        z-index: 1;
       }
 
       .brand {
@@ -394,10 +395,11 @@
 
       .content {
         flex: 1;
-        margin-left: 260px;
+        width: calc(100% - 260px);
+        height: 100%;
         padding: 1.5rem;
-        height: 100vh;
         overflow-y: auto;
+        overflow-x: hidden;
         background: linear-gradient(180deg, rgba(248,250,252,0.8) 0%, rgba(238,244,248,0.9) 100%);
       }
 
@@ -405,6 +407,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
         gap: 1rem;
         margin-bottom: 1.5rem;
         padding: 1rem 1.2rem;
@@ -428,8 +431,10 @@
       .topbar-actions {
         display: flex;
         align-items: center;
+        justify-content: flex-end;
         gap: 0.75rem;
         flex-wrap: wrap;
+        flex: 1;
       }
 
       .mobile-sidebar-toggle {
@@ -921,14 +926,17 @@
 
       @media (max-width: 1024px) {
         .content {
-          margin-left: 0;
           padding: 1rem;
         }
 
         .sidebar {
+          position: absolute;
+          left: 0;
+          top: 0;
           transform: translateX(-105%);
           z-index: 1200;
           width: min(290px, 82vw);
+          min-width: min(290px, 82vw);
           box-shadow: 20px 0 40px rgba(15,23,42,0.18);
         }
 
