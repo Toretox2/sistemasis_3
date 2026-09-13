@@ -807,8 +807,8 @@ function bindWorkScheduleForm() {
       ? Array.from(
           employeeList.querySelectorAll('input.employee-checkbox:checked')
         )
-          .map((checkbox) => Number(checkbox.value || checkbox.dataset.id))
-          .filter((id) => Number.isFinite(id))
+          .map((checkbox) => String(checkbox.value || checkbox.dataset.id || '').trim())
+          .filter((id) => id.length > 0)
       : [];
 
     const checkboxesFound = employeeList
