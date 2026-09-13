@@ -1986,11 +1986,20 @@ function calculateEstimatedPay(employeeOrBaseSalary, regularHours, extraHours, s
   return regularPay + extraPay;
 }
 
-function formatCurrency(value) {
-  return new Intl.NumberFormat('es-ES', {
+function formatCurrency(value, currencyCode = dashboardState.currency) {
+  const localeByCurrency = {
+    GTQ: 'es-GT',
+    USD: 'en-US',
+    EUR: 'es-ES',
+  };
+
+  const locale = localeByCurrency[currencyCode] || 'es-GT';
+
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: dashboardState.currency,
+    currency: currencyCode,
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Number(value || 0));
 }
 
