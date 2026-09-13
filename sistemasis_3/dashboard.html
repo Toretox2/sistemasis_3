@@ -10,11 +10,18 @@
     <link rel="stylesheet" href="./css/styles.css" />
     <style>
       :root {
-        --sidebar-bg: #0B132B;
-        --sidebar-muted: rgba(255,255,255,0.7);
-        --sidebar-active: rgba(71, 168, 189, 0.15);
+        --sidebar-bg: #0f172a;
+        --sidebar-bg-2: #111827;
+        --sidebar-muted: rgba(255,255,255,0.72);
+        --sidebar-active: rgba(6, 182, 212, 0.18);
         --panel-bg: #ffffff;
-        --panel-border: rgba(11, 19, 43, 0.08);
+        --panel-border: rgba(15, 23, 42, 0.08);
+        --surface-soft: #f8fafc;
+        --surface-strong: #eef6fb;
+        --text-soft: #64748b;
+        --primary: #06b6d4;
+        --primary-dark: #0f172a;
+        --primary-strong: #0891b2;
       }
 
       * { box-sizing: border-box; }
@@ -24,8 +31,20 @@
         height: 100vh;
         overflow: hidden;
         font-family: var(--font-primary);
-        background: #f3f7fb;
+        background: linear-gradient(180deg, #f8fafc 0%, #eef4f8 100%);
         color: var(--color-text);
+        position: relative;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(15, 23, 42, 0.015) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(15, 23, 42, 0.015) 1px, transparent 1px);
+        background-size: 28px 28px;
+        pointer-events: none;
       }
 
       .app-shell {
@@ -40,13 +59,16 @@
         left: 0;
         width: 260px;
         height: 100vh;
-        background: linear-gradient(180deg, var(--sidebar-bg) 0%, #101d34 100%);
+        background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-2) 100%);
         color: #fff;
-        padding: 1.5rem 1rem;
+        padding: 1.3rem 0.9rem;
         display: flex;
         flex-direction: column;
         gap: 1.5rem;
         overflow: hidden;
+        border-right: 1px solid rgba(148, 163, 184, 0.14);
+        box-shadow: 18px 0 36px rgba(15, 23, 42, 0.12);
+        transition: transform 0.25s ease;
       }
 
       .brand {
@@ -100,19 +122,34 @@
         transition: all var(--transition-base);
         font-weight: 600;
         border: 1px solid transparent;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nav-item::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 3px;
+        background: transparent;
+        border-radius: 0 8px 8px 0;
       }
 
       .nav-item:hover {
         background: rgba(255,255,255,0.04);
-        border-color: rgba(71,168,189,0.25);
+        border-color: rgba(6,182,212,0.25);
         transform: translateX(2px);
       }
 
       .nav-item.active {
-        background: var(--sidebar-active);
+        background: linear-gradient(135deg, rgba(6,182,212,0.18), rgba(34,211,238,0.08));
         color: white;
-        border-color: rgba(71,168,189,0.3);
+        border-color: rgba(103,232,249,0.4);
         transform: translateX(2px);
+      }
+
+      .nav-item.active::before {
+        background: linear-gradient(180deg, #67e8f9, #22d3ee);
       }
 
       .settings-grid {
@@ -361,6 +398,7 @@
         padding: 1.5rem;
         height: 100vh;
         overflow-y: auto;
+        background: linear-gradient(180deg, rgba(248,250,252,0.8) 0%, rgba(238,244,248,0.9) 100%);
       }
 
       .topbar {
@@ -369,6 +407,12 @@
         align-items: center;
         gap: 1rem;
         margin-bottom: 1.5rem;
+        padding: 1rem 1.2rem;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(248,250,252,0.92));
+        border: 1px solid rgba(15,23,42,0.06);
+        box-shadow: 0 12px 28px rgba(15,23,42,0.06);
+        backdrop-filter: blur(10px);
       }
 
       .page-title h2 {
@@ -385,24 +429,41 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .mobile-sidebar-toggle {
+        display: none;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        background: rgba(255,255,255,0.8);
+        color: var(--color-primary);
+        cursor: pointer;
+        font-size: 1.2rem;
+        box-shadow: 0 8px 20px rgba(15,23,42,0.06);
       }
 
       .filter-chip,
       .action-btn,
       .sidebar-logout {
         border: 1px solid var(--panel-border);
-        background: white;
+        background: rgba(255,255,255,0.9);
         color: var(--color-primary);
         border-radius: 12px;
         padding: 0.7rem 1rem;
         cursor: pointer;
         transition: all var(--transition-base);
+        box-shadow: 0 4px 10px rgba(15,23,42,0.04);
+        font-weight: 700;
       }
 
       .action-btn {
-        background: var(--color-primary);
+        background: linear-gradient(135deg, var(--primary), var(--primary-strong));
         color: white;
-        border-color: var(--color-primary);
+        border-color: transparent;
+        box-shadow: 0 12px 20px rgba(6,182,212,0.25);
       }
 
       .filter-chip:hover,
@@ -487,17 +548,29 @@
       }
 
       .metric-card {
-        background: var(--panel-bg);
-        border: 1px solid var(--panel-border);
+        position: relative;
+        background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.9));
+        border: 1px solid rgba(15,23,42,0.05);
         border-radius: 18px;
         padding: 1.2rem 1.1rem;
-        box-shadow: var(--shadow-soft);
-        transition: transform var(--transition-base), box-shadow var(--transition-base);
+        box-shadow: 0 4px 6px -1px rgba(15,23,42,0.05);
+        transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+        overflow: hidden;
+      }
+
+      .metric-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto auto 0;
+        height: 4px;
+        width: 100%;
+        background: linear-gradient(90deg, rgba(6,182,212,0.95), rgba(103,232,249,0.55));
       }
 
       .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-card);
+        transform: translateY(-3px);
+        box-shadow: 0 12px 24px rgba(15,23,42,0.08);
+        border-color: rgba(6,182,212,0.18);
       }
 
       .metric-top {
@@ -532,6 +605,7 @@
         font-weight: 800;
         color: var(--color-primary);
         margin: 0.2rem 0;
+        letter-spacing: -0.04em;
       }
 
       .metric-sub {
@@ -554,10 +628,10 @@
       }
 
       .panel {
-        background: var(--panel-bg);
-        border: 1px solid var(--panel-border);
+        background: rgba(255,255,255,0.96);
+        border: 1px solid rgba(15,23,42,0.06);
         border-radius: 18px;
-        box-shadow: var(--shadow-soft);
+        box-shadow: 0 10px 24px rgba(15,23,42,0.04);
         overflow: hidden;
       }
 
@@ -568,11 +642,13 @@
         gap: 1rem;
         padding: 1.2rem 1.2rem 0.9rem;
         border-bottom: 1px solid rgba(11, 19, 43, 0.06);
+        background: linear-gradient(180deg, rgba(248,250,252,0.45), rgba(255,255,255,0));
       }
 
       .panel-header h3 {
         margin: 0;
-        font-size: 1.1rem;
+        font-size: 1.08rem;
+        letter-spacing: -0.01em;
       }
 
       .panel-tools {
@@ -591,38 +667,41 @@
 
       .table-wrap {
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       table {
         width: 100%;
         border-collapse: collapse;
+        min-width: 760px;
       }
 
       th, td {
         text-align: left;
-        padding: 1rem 1.2rem;
-        border-bottom: 1px solid rgba(11, 19, 43, 0.06);
+        padding: 0.9rem 1rem;
+        border-bottom: 1px solid rgba(15,23,42,0.06);
       }
 
       th {
         background: #f8fafc;
-        color: var(--color-primary);
-        font-size: 0.8rem;
+        color: var(--text-soft);
+        font-size: 0.72rem;
         text-transform: uppercase;
         letter-spacing: 0.08em;
+        font-weight: 700;
       }
 
       td {
         color: var(--color-text);
-        font-size: 0.95rem;
+        font-size: 0.94rem;
       }
 
       tbody tr {
-        transition: background var(--transition-fast);
+        transition: background var(--transition-fast), transform var(--transition-fast);
       }
 
       tbody tr:hover {
-        background: rgba(71, 168, 189, 0.03);
+        background: rgba(6, 182, 212, 0.03);
       }
 
       .status {
@@ -697,26 +776,37 @@
       .employee-modal-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(11, 19, 43, 0.42);
+        background: rgba(15, 23, 42, 0.44);
         backdrop-filter: blur(8px);
         display: none;
         align-items: center;
         justify-content: center;
         z-index: 1000;
         padding: 1rem;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
       }
 
       .employee-modal-backdrop.is-open {
         display: flex;
+        opacity: 1;
+        visibility: visible;
       }
 
       .employee-modal {
         width: min(440px, 100%);
-        background: rgba(255, 255, 255, 0.85);
-        border: 1px solid rgba(11, 19, 43, 0.08);
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(15, 23, 42, 0.06);
         border-radius: 22px;
-        box-shadow: 0 24px 60px rgba(11, 19, 43, 0.18);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
         padding: 1.5rem;
+        transform: scale(0.96);
+        transition: transform 0.2s ease;
+      }
+
+      .employee-modal-backdrop.is-open .employee-modal {
+        transform: scale(1);
       }
 
       .employee-modal h3 {
@@ -829,17 +919,68 @@
         transform: translateY(-1px);
       }
 
-      @media (max-width: 900px) {
-        .app-shell {
-          flex-direction: column;
+      @media (max-width: 1024px) {
+        .content {
+          margin-left: 0;
+          padding: 1rem;
         }
 
         .sidebar {
-          width: 100%;
+          transform: translateX(-105%);
+          z-index: 1200;
+          width: min(290px, 82vw);
+          box-shadow: 20px 0 40px rgba(15,23,42,0.18);
         }
 
+        body.sidebar-open .sidebar {
+          transform: translateX(0);
+        }
+
+        .mobile-sidebar-toggle {
+          display: inline-grid;
+          place-items: center;
+        }
+
+        .topbar {
+          padding: 0.9rem 1rem;
+        }
+
+        .page-title h2 {
+          font-size: 1.45rem;
+        }
+      }
+
+      @media (max-width: 860px) {
         .metrics-grid {
           grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          flex-wrap: wrap;
+        }
+
+        .topbar-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .content {
+          padding: 0.75rem;
+        }
+
+        .topbar {
+          margin-bottom: 1rem;
+        }
+
+        .panel-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .topbar-actions {
+          gap: 0.5rem;
         }
       }
     </style>
@@ -898,6 +1039,7 @@
           </div>
 
           <div class="topbar-actions">
+            <button id="mobileSidebarToggle" class="mobile-sidebar-toggle" type="button" aria-label="Abrir menú">☰</button>
             <button class="filter-chip" type="button">Hoy</button>
             <select id="currencySelector" class="mini-select" aria-label="Seleccionar moneda">
               <option value="USD">USD (Dólares)</option>
@@ -1358,6 +1500,44 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="./js/config.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        if (mobileSidebarToggle) {
+          mobileSidebarToggle.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-open');
+          });
+        }
+
+        navItems.forEach((item) => {
+          item.addEventListener('click', () => {
+            if (window.innerWidth <= 1024) {
+              document.body.classList.remove('sidebar-open');
+            }
+          });
+        });
+
+        document.addEventListener('click', (event) => {
+          const sidebar = document.querySelector('.sidebar');
+          const toggle = document.getElementById('mobileSidebarToggle');
+
+          if (window.innerWidth > 1024) {
+            return;
+          }
+
+          if (
+            sidebar &&
+            document.body.classList.contains('sidebar-open') &&
+            !sidebar.contains(event.target) &&
+            !(toggle && toggle.contains(event.target))
+          ) {
+            document.body.classList.remove('sidebar-open');
+          }
+        });
+      });
+    </script>
     <script src="./js/admin-dashboard.js"></script>
   </body>
 </html>
