@@ -280,8 +280,10 @@
         width: 100%;
         min-height: clamp(280px, 48vh, 500px);
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 0.75rem;
       }
 
       #qr-reader video {
@@ -320,6 +322,52 @@
         transform: translateY(-1px);
         border-color: rgba(34, 211, 238, 0.5);
         box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.2);
+      }
+
+      #qr-reader button.html5-qrcode-button,
+      #qr-reader button {
+        appearance: none;
+        border: none !important;
+        border-radius: 9999px !important;
+        background: linear-gradient(135deg, #06b6d4, #0891b2) !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        padding: 12px 24px !important;
+        margin-top: 0.75rem !important;
+        cursor: pointer;
+        box-shadow: 0 10px 30px rgba(6, 182, 212, 0.30);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+      }
+
+      #qr-reader button.html5-qrcode-button:hover,
+      #qr-reader button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 32px rgba(6, 182, 212, 0.38);
+        filter: brightness(1.05);
+      }
+
+      #qr-reader a,
+      #qr-reader a.html5-qrcode-element {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 0.75rem;
+        padding: 10px 22px;
+        border-radius: 9999px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        background: rgba(15, 23, 42, 0.24);
+        color: #dbeafe !important;
+        font-weight: 600;
+        text-decoration: none !important;
+        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+      }
+
+      #qr-reader a:hover,
+      #qr-reader a.html5-qrcode-element:hover {
+        background: rgba(6, 182, 212, 0.18);
+        border-color: rgba(103, 232, 249, 0.5);
+        color: #ffffff !important;
+        transform: translateY(-1px);
       }
 
       .info-panel {
