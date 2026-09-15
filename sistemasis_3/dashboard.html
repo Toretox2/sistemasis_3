@@ -505,6 +505,12 @@
         font-weight: 700;
       }
 
+      .sidebar-session-logout {
+        border-color: rgba(248, 113, 113, 0.45);
+        background: rgba(248, 113, 113, 0.1);
+        color: #fecaca;
+      }
+
       .metrics-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(200px, 1fr));
@@ -1082,6 +1088,7 @@
             </div>
           </div>
           <button id="returnToScannerBtn" class="sidebar-logout" type="button">Volver al Escáner</button>
+          <button id="logoutBtn" class="sidebar-logout sidebar-session-logout" type="button">Cerrar sesión</button>
         </div>
       </aside>
 

@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindWorkScheduleForm();
   bindShiftManagement();
   bindReturnToScanner();
+  bindLogoutButton();
   await loadDashboardData();
   await loadPayrollHistory();
   await loadWorkScheduleSettings();
@@ -1439,6 +1440,34 @@ function populateShiftSelectorOptions(shifts) {
     (shifts || []).map((shift) => `<option value="${shift.id}">${shift.name}</option>`).join('');
 }
 
+async function cerrarSesion() {
+  const supabase = window.AuraTechSupabase;
+
+  try {
+    if (supabase?.auth) {
+      await supabase.auth.signOut();
+    }
+  } catch (error) {
+    console.warn('No se pudo cerrar sesión en Supabase:', error);
+  } finally {
+    sessionStorage.clear();
+    localStorage.removeItem('supabase.auth.token');
+  }
+}
+
+function bindLogoutButton() {
+  const logoutButton = document.getElementById('logoutBtn');
+
+  if (!logoutButton) {
+    return;
+  }
+
+  logoutButton.addEventListener('click', async () => {
+    await cerrarSesion();
+    window.location.href = './admin-login.html';
+  });
+}
+
 function bindReturnToScanner() {
   const returnButton = document.getElementById('returnToScannerBtn');
 
@@ -1447,25 +1476,7 @@ function bindReturnToScanner() {
   }
 
   returnButton.addEventListener('click', async () => {
-    const supabase = window.AuraTechSupabase;
-
-    try {
-      if (supabase?.auth) {
-        await supabase.auth.signOut();
-      }
-    } catch (error) {
-      console.warn('No se pudo cerrar sesión en Supabase:', error);
-    }
-
-    localStorage.removeItem('supabase.auth.token');
-    sessionStorage.clear();
-    document.cookie.split(';').forEach((cookie) => {
-      const name = cookie.trim().split('=')[0];
-      if (name) {
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-      }
-    });
-
+    await cerrarSesion();
     window.location.href = './index.html';
   });
 }

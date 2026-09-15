@@ -5,11 +5,12 @@ if (!window.supabase || typeof window.supabase.createClient !== 'function') {
   console.error('No se pudo cargar la librería de Supabase. Revisa la conexión o el bloqueo de CDN.');
 } else {
   const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
+    auth: {
+      persistSession: true,
+      storage: window.sessionStorage,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
   });
 
   window.AuraTechSupabase = supabase;
