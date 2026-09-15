@@ -172,7 +172,27 @@ function switchView(viewName) {
 }
 
 async function loadDashboardData() {
+  const supabase = window.AuraTechSupabase;
+
+  if (!supabase) {
+    return;
+  }
+
   try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
+    if (!session) {
+      showLockScreen();
+      return;
+    }
+
     const [rows, employees] = await Promise.all([
       fetchAttendanceWithEmployees(),
       fetchEmployees(),
@@ -185,9 +205,22 @@ async function loadDashboardData() {
     populateFilterOptions(rows);
     renderDashboard();
   } catch (error) {
+    if (isAuthenticationError(error)) {
+      showLockScreen();
+      return;
+    }
+
     console.error('Error al cargar datos del dashboard:', error);
     showEmptyTable('Error al cargar los registros.');
   }
+}
+
+function isAuthenticationError(error) {
+  return error?.status === 401
+    || error?.status === 403
+    || error?.code === '401'
+    || error?.code === '403'
+    || error?.code === 'PGRST301';
 }
 
 async function loadPayrollHistory() {
@@ -1539,6 +1572,7 @@ function bindLockScreen() {
 
     passwordInput.value = '';
     hideLockScreen();
+    await loadDashboardData();
   });
 }
 
