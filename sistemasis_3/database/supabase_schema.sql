@@ -59,6 +59,28 @@ CREATE POLICY "Public can read employees for QR validation"
     TO anon, authenticated
     USING (true);
 
+DROP POLICY IF EXISTS "Public can insert employees" ON public.employees;
+CREATE POLICY "Public can insert employees"
+    ON public.employees
+    FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can update employees" ON public.employees;
+CREATE POLICY "Public can update employees"
+    ON public.employees
+    FOR UPDATE
+    TO anon, authenticated
+    USING (true)
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can delete employees" ON public.employees;
+CREATE POLICY "Public can delete employees"
+    ON public.employees
+    FOR DELETE
+    TO anon, authenticated
+    USING (true);
+
 DROP POLICY IF EXISTS "Public can read attendance logs" ON public.attendance_logs;
 CREATE POLICY "Public can read attendance logs"
     ON public.attendance_logs

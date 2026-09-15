@@ -682,6 +682,33 @@ function bindEmployeeQrModal() {
     if (!button) return;
 
     const employee = dashboardState.employees.find((item) => item.id === button.dataset.employeeId);
+    if (button.dataset.employeeAction === 'delete') {
+      if (!employee) {
+        showToast('No se encontró el empleado seleccionado.');
+        return;
+      }
+
+      const confirmed = window.confirm(`¿Deseas eliminar a ${employee.nombre}? También se eliminarán sus registros de asistencia.`);
+      if (!confirmed) return;
+
+      try {
+        const supabase = window.AuraTechSupabase;
+        const { error } = await supabase
+          .from('employees')
+          .delete()
+          .eq('id', employee.id);
+
+        if (error) throw error;
+
+        showToast('Empleado eliminado correctamente.');
+        await loadDashboardData();
+      } catch (error) {
+        console.error('Error al eliminar el empleado:', error);
+        showToast('No se pudo eliminar el empleado. Intenta nuevamente.');
+      }
+      return;
+    }
+
     const qrCodeHash = employee?.qr_code_hash;
     if (!employee || !qrCodeHash) {
       showToast('Este empleado no tiene un token QR disponible.');
@@ -1857,6 +1884,7 @@ function renderEmployeesView() {
           <button class="edit-employee-btn" data-employee-id="${employee.employeeId}" type="button">Editar</button>
           <button class="edit-employee-btn" data-employee-action="view-qr" data-employee-id="${employee.employeeId}" type="button">Ver QR</button>
           <button class="edit-employee-btn" data-employee-action="download-qr" data-employee-id="${employee.employeeId}" type="button">Descargar QR</button>
+          <button class="edit-employee-btn" data-employee-action="delete" data-employee-id="${employee.employeeId}" type="button">Eliminar</button>
         </div>
       </td>
     </tr>
