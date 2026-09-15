@@ -88,7 +88,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     visibilityLogoutInProgress = true;
-    await cerrarSesion('./index.html?logout=security');
+    await cerrarSesion();
+    showLockScreen();
+    visibilityLogoutInProgress = false;
   });
 
   const exportButton = document.getElementById('exportPayrollBtn');
@@ -124,6 +126,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindShiftManagement();
   bindReturnToScanner();
   bindLogoutButton();
+  bindLockScreen();
   await loadDashboardData();
   await loadPayrollHistory();
   await loadWorkScheduleSettings();
@@ -1467,6 +1470,76 @@ async function cerrarSesion(redirectUrl = '') {
       window.location.href = redirectUrl;
     }
   }
+}
+
+function showLockScreen() {
+  const lockScreen = document.getElementById('lock-screen');
+
+  if (!lockScreen) {
+    return;
+  }
+
+  lockScreen.classList.add('is-visible');
+  lockScreen.setAttribute('aria-hidden', 'false');
+  document.getElementById('lockScreenEmail')?.focus();
+}
+
+function hideLockScreen() {
+  const lockScreen = document.getElementById('lock-screen');
+
+  if (!lockScreen) {
+    return;
+  }
+
+  lockScreen.classList.remove('is-visible');
+  lockScreen.setAttribute('aria-hidden', 'true');
+}
+
+function bindLockScreen() {
+  const form = document.getElementById('lockScreenForm');
+  const emailInput = document.getElementById('lockScreenEmail');
+  const passwordInput = document.getElementById('lockScreenPassword');
+  const errorMessage = document.getElementById('lockScreenError');
+
+  if (!form || !emailInput || !passwordInput || !errorMessage) {
+    return;
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    errorMessage.textContent = '';
+
+    const supabase = window.AuraTechSupabase;
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    if (!supabase) {
+      errorMessage.textContent = 'La conexión con Supabase no está disponible.';
+      return;
+    }
+
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: emailInput.value.trim(),
+      password: passwordInput.value,
+    });
+
+    if (submitButton) {
+      submitButton.disabled = false;
+    }
+
+    if (error) {
+      errorMessage.textContent = 'Correo o contraseña incorrectos.';
+      passwordInput.value = '';
+      passwordInput.focus();
+      return;
+    }
+
+    passwordInput.value = '';
+    hideLockScreen();
+  });
 }
 
 function bindLogoutButton() {

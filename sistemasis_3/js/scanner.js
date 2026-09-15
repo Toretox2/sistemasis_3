@@ -1,10 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('logout') === 'security') {
-    alert('Sesión cerrada por seguridad debido a inactividad o cambio de pestaña.');
-    window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.hash}`);
-  }
-
   const scannerStatus = document.getElementById('scannerStatus');
   const supabase = window.AuraTechSupabase;
 
