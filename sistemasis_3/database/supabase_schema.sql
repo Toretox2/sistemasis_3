@@ -16,52 +16,13 @@ CREATE TABLE IF NOT EXISTS public.employees (
 
 ALTER TABLE public.employees
     ADD COLUMN IF NOT EXISTS pago_por_dia NUMERIC(12,2) NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS horas_jornada NUMERIC(5,2) NOT NULL DEFAULT 8,
-    ADD COLUMN IF NOT EXISTS qr_dynamic_token TEXT,
-    ADD COLUMN IF NOT EXISTS qr_token_expires_at TIMESTAMPTZ;
+    ADD COLUMN IF NOT EXISTS horas_jornada NUMERIC(5,2) NOT NULL DEFAULT 8;
 
-CREATE INDEX IF NOT EXISTS idx_employees_qr_dynamic_token
-    ON public.employees(qr_dynamic_token);
-
-CREATE OR REPLACE FUNCTION public.rotate_employee_qr_token(target_employee_id UUID)
-RETURNS TABLE (qr_dynamic_token TEXT, qr_token_expires_at TIMESTAMPTZ)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-    next_token TEXT;
-BEGIN
-    LOOP
-        next_token := LPAD(FLOOR(RANDOM() * 1000000000)::BIGINT::TEXT, 9, '0');
-        EXIT WHEN NOT EXISTS (
-            SELECT 1
-            FROM public.employees
-            WHERE public.employees.qr_dynamic_token = next_token
-        );
-    END LOOP;
-
-    RETURN QUERY
-    UPDATE public.employees
-    SET qr_dynamic_token = next_token,
-        qr_token_expires_at = NOW() + INTERVAL '60 seconds'
-    WHERE id = target_employee_id
-    RETURNING public.employees.qr_dynamic_token, public.employees.qr_token_expires_at;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.validate_qr_token(scanned_token TEXT)
-RETURNS SETOF public.employees
-LANGUAGE SQL
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-    SELECT *
-    FROM public.employees
-    WHERE qr_dynamic_token = scanned_token
-      AND qr_token_expires_at > NOW();
-$$;
+DROP FUNCTION IF EXISTS public.rotate_employee_qr_token(UUID);
+DROP FUNCTION IF EXISTS public.validate_qr_token(TEXT);
+ALTER TABLE public.employees
+    DROP COLUMN IF EXISTS qr_dynamic_token,
+    DROP COLUMN IF EXISTS qr_token_expires_at;
 
 CREATE TABLE IF NOT EXISTS public.attendance_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

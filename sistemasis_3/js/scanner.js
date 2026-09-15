@@ -121,21 +121,23 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   async function getEmployeeByQrCode(qrCode) {
-    const { data, error } = await supabase.rpc('validate_qr_token', {
-      scanned_token: qrCode,
-    });
+    const { data, error } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('qr_code_hash', qrCode)
+      .maybeSingle();
 
     if (error) {
       throw error;
     }
 
-    if (!data || !data.length) {
-      const expiredError = new Error('QR expirado o inválido');
-      expiredError.code = 'QR_EXPIRED';
-      throw expiredError;
+    if (!data) {
+      const invalidQrError = new Error('Código QR no válido');
+      invalidQrError.code = 'QR_INVALID';
+      throw invalidQrError;
     }
 
-    return data[0];
+    return data;
   }
 
   async function getTodayAttendance(employeeId) {
@@ -247,12 +249,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => scanner.resume(), 1500);
       } catch (error) {
         console.error('Error al procesar el QR:', error);
-        const qrExpired = error?.code === 'QR_EXPIRED';
-        setStatus(qrExpired ? 'QR expirado o inválido' : 'Error en el registro', 'error');
+        const qrInvalid = error?.code === 'QR_INVALID';
+        setStatus(qrInvalid ? 'QR no válido' : 'Error en el registro', 'error');
         await Swal.fire({
-          title: qrExpired ? 'QR expirado o inválido' : 'No se pudo registrar la asistencia',
-          text: qrExpired
-            ? 'Genera un código QR nuevo antes de registrar la asistencia.'
+          title: qrInvalid ? 'Código QR no válido' : 'No se pudo registrar la asistencia',
+          text: qrInvalid
+            ? 'No se encontró un empleado asociado a este código.'
             : 'Revisa la conexión con Supabase o el QR escaneado.',
           icon: 'error',
           confirmButtonColor: '#47A8BD',
