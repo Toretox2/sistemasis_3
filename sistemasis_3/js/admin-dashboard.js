@@ -81,6 +81,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  let visibilityLogoutInProgress = false;
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'hidden' || visibilityLogoutInProgress) {
+      return;
+    }
+
+    visibilityLogoutInProgress = true;
+    await cerrarSesion('./index.html?logout=security');
+  });
+
   const exportButton = document.getElementById('exportPayrollBtn');
 
   if (exportButton) {
@@ -1440,7 +1450,7 @@ function populateShiftSelectorOptions(shifts) {
     (shifts || []).map((shift) => `<option value="${shift.id}">${shift.name}</option>`).join('');
 }
 
-async function cerrarSesion() {
+async function cerrarSesion(redirectUrl = '') {
   const supabase = window.AuraTechSupabase;
 
   try {
@@ -1452,6 +1462,10 @@ async function cerrarSesion() {
   } finally {
     sessionStorage.clear();
     localStorage.removeItem('supabase.auth.token');
+
+    if (redirectUrl) {
+      window.location.href = redirectUrl;
+    }
   }
 }
 
