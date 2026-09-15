@@ -796,6 +796,17 @@
         transform: translateY(-1px);
       }
 
+      .employee-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .employee-actions .edit-employee-btn {
+        font-size: 0.82rem;
+        padding: 0.4rem 0.6rem;
+      }
+
       .employee-modal-backdrop {
         position: fixed;
         inset: 0;
@@ -862,6 +873,23 @@
         justify-content: flex-end;
         gap: 0.75rem;
         margin-top: 1.5rem;
+      }
+
+      .qr-content {
+        display: grid;
+        justify-items: center;
+        gap: 0.75rem;
+        margin-top: 1rem;
+        color: var(--color-muted);
+        text-align: center;
+      }
+
+      .qr-content img {
+        width: min(300px, 100%);
+        height: auto;
+        border-radius: 12px;
+        background: #ffffff;
+        padding: 0.5rem;
       }
 
       .history-list {
@@ -1213,6 +1241,7 @@
           <section class="panel">
             <div class="panel-header">
               <h3>Empleados</h3>
+              <button id="newEmployeeBtn" class="btn btn-primary" type="button">+ Nuevo Empleado</button>
             </div>
             <div class="table-wrap">
               <table>
@@ -1520,6 +1549,57 @@
         <div class="employee-modal-actions">
           <button id="cancelEmployeeEdit" class="btn btn-secondary" type="button">Cancelar</button>
           <button id="saveEmployeeEdit" class="btn btn-primary" type="button">Guardar Cambios</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="newEmployeeModal" class="employee-modal-backdrop" aria-hidden="true">
+      <div class="employee-modal" role="dialog" aria-modal="true" aria-labelledby="newEmployeeModalTitle">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+          <h3 id="newEmployeeModalTitle">Nuevo empleado</h3>
+          <button id="closeNewEmployee" class="edit-employee-btn" type="button" aria-label="Cerrar">✕</button>
+        </div>
+
+        <form id="newEmployeeForm">
+          <div class="employee-modal-grid">
+            <label>
+              Nombre
+              <input id="newEmployeeName" name="nombre" type="text" required maxlength="120" autocomplete="name" />
+            </label>
+
+            <label>
+              Cargo / Departamento
+              <input id="newEmployeeDepartment" name="cargo" type="text" required maxlength="120" />
+            </label>
+
+            <label>
+              Salario base mensual
+              <input id="newEmployeeSalary" name="salario_base" type="number" step="0.01" min="0" required placeholder="0.00" />
+            </label>
+
+            <label>
+              Horas de la jornada
+              <input id="newEmployeeHours" name="horas_jornada" type="number" step="0.5" min="1" max="24" value="8" required />
+            </label>
+          </div>
+
+          <div class="employee-modal-actions">
+            <button id="cancelNewEmployee" class="btn btn-secondary" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Crear empleado</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="employeeQrModal" class="employee-modal-backdrop" aria-hidden="true">
+      <div class="employee-modal qr-modal" role="dialog" aria-modal="true" aria-labelledby="employeeQrTitle">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+          <h3 id="employeeQrTitle">Código QR</h3>
+          <button id="closeEmployeeQr" class="edit-employee-btn" type="button" aria-label="Cerrar">✕</button>
+        </div>
+        <div id="employeeQrContent" class="qr-content"></div>
+        <div class="employee-modal-actions">
+          <button id="downloadEmployeeQr" class="btn btn-primary" type="button">Descargar QR</button>
         </div>
       </div>
     </div>

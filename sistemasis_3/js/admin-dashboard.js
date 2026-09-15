@@ -2,6 +2,7 @@ const dashboardState = {
   allRows: [],
   filteredRows: [],
   payrollHistory: [],
+  employees: [],
   selectedHistoryId: null,
   historyPeriodId: null,
   currentPage: 1,
@@ -158,8 +159,12 @@ function switchView(viewName) {
 
 async function loadDashboardData() {
   try {
-    const rows = await fetchAttendanceWithEmployees();
+    const [rows, employees] = await Promise.all([
+      fetchAttendanceWithEmployees(),
+      fetchEmployees(),
+    ]);
     dashboardState.allRows = rows;
+    dashboardState.employees = employees;
     dashboardState.filteredRows = rows;
     dashboardState.currentPage = 1;
 
@@ -495,8 +500,9 @@ function bindEmployeeModal() {
 
   const openModal = (employeeId) => {
     const allRows = dashboardState.filteredRows.length ? dashboardState.filteredRows : dashboardState.allRows;
-    const row = allRows.find((item) => (item.employee_id || item.employees?.id) === employeeId) || allRows[0];
-    const employee = row?.employees || {};
+    const employee = dashboardState.employees.find((item) => item.id === employeeId)
+      || allRows.find((item) => (item.employee_id || item.employees?.id) === employeeId)?.employees
+      || {};
     const shiftSelect = document.getElementById('employeeEditShiftId');
 
     document.getElementById('employeeEditId').value = employeeId;
@@ -556,10 +562,13 @@ function bindEmployeeModal() {
     }
   });
 
+  bindNewEmployeeModal();
+  bindEmployeeQrModal();
+
   document.addEventListener('click', (event) => {
     const button = event.target.closest('.edit-employee-btn');
 
-    if (!button) {
+    if (!button || button.dataset.employeeAction) {
       return;
     }
 
@@ -569,6 +578,158 @@ function bindEmployeeModal() {
       openModal(employeeId);
     }
   });
+}
+
+function bindNewEmployeeModal() {
+  const modal = document.getElementById('newEmployeeModal');
+  const form = document.getElementById('newEmployeeForm');
+  const openButton = document.getElementById('newEmployeeBtn');
+  const cancelButton = document.getElementById('cancelNewEmployee');
+  const closeButton = document.getElementById('closeNewEmployee');
+
+  if (!modal || !form || !openButton || !cancelButton || !closeButton) return;
+
+  const closeModal = () => {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    form.reset();
+    document.getElementById('newEmployeeHours').value = '8';
+  };
+
+  openButton.addEventListener('click', () => {
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.getElementById('newEmployeeName').focus();
+  });
+  cancelButton.addEventListener('click', closeModal);
+  closeButton.addEventListener('click', closeModal);
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeModal();
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const supabase = window.AuraTechSupabase;
+    const name = document.getElementById('newEmployeeName').value.trim();
+    const department = document.getElementById('newEmployeeDepartment').value.trim();
+    const salary = parseFloat(document.getElementById('newEmployeeSalary').value.trim());
+    const hours = parseFloat(document.getElementById('newEmployeeHours').value.trim());
+
+    if (!supabase || !name || !department || !Number.isFinite(salary) || salary < 0 || !Number.isFinite(hours) || hours <= 0) {
+      showToast('Completa los datos del empleado correctamente.');
+      return;
+    }
+
+    try {
+      const qrCodeHash = await generateUniqueQrCodeHash(supabase);
+      const { error } = await supabase.from('employees').insert({
+        nombre: name,
+        cargo: department,
+        salario_base: salary,
+        horas_jornada: hours,
+        qr_code_hash: qrCodeHash,
+      });
+
+      if (error) throw error;
+
+      closeModal();
+      showToast('Empleado creado correctamente.');
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error al crear el empleado:', error);
+      showToast('No se pudo crear el empleado. Intenta nuevamente.');
+    }
+  });
+}
+
+async function generateUniqueQrCodeHash(supabase) {
+  const { data, error } = await supabase
+    .from('employees')
+    .select('qr_code_hash');
+
+  if (error) throw error;
+
+  const usedCodes = new Set((data || []).map((employee) => employee.qr_code_hash).filter(Boolean));
+  let code = '';
+
+  do {
+    code = String(Math.floor(100000000 + Math.random() * 900000000));
+  } while (usedCodes.has(code));
+
+  return code;
+}
+
+function bindEmployeeQrModal() {
+  const modal = document.getElementById('employeeQrModal');
+  const closeButton = document.getElementById('closeEmployeeQr');
+  const downloadButton = document.getElementById('downloadEmployeeQr');
+
+  if (!modal || !closeButton || !downloadButton) return;
+
+  const closeModal = () => {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+  };
+
+  closeButton.addEventListener('click', closeModal);
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeModal();
+  });
+
+  document.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-employee-action]');
+    if (!button) return;
+
+    const employee = dashboardState.employees.find((item) => item.id === button.dataset.employeeId);
+    const qrCodeHash = employee?.qr_code_hash;
+    if (!employee || !qrCodeHash) {
+      showToast('Este empleado no tiene un token QR disponible.');
+      return;
+    }
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCodeHash)}`;
+    const safeName = employee.nombre.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'Empleado';
+
+    if (button.dataset.employeeAction === 'view-qr') {
+      document.getElementById('employeeQrTitle').textContent = `QR de ${employee.nombre}`;
+      document.getElementById('employeeQrContent').innerHTML = `
+        <img src="${qrUrl}" alt="Código QR de ${escapeHtml(employee.nombre)}" width="250" height="250" />
+        <p>Código: <strong>${escapeHtml(qrCodeHash)}</strong></p>
+      `;
+      downloadButton.dataset.qrUrl = qrUrl;
+      downloadButton.dataset.fileName = `QR_${safeName}.png`;
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      return;
+    }
+
+    await downloadQrImage(qrUrl, `QR_${safeName}.png`);
+  });
+
+  downloadButton.addEventListener('click', async () => {
+    if (downloadButton.dataset.qrUrl) {
+      await downloadQrImage(downloadButton.dataset.qrUrl, downloadButton.dataset.fileName);
+    }
+  });
+}
+
+async function downloadQrImage(url, fileName) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('No se pudo descargar el QR.');
+    const blobUrl = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.warn('Descarga directa no disponible, se abrirá el QR:', error);
+    window.open(url, '_blank', 'noopener');
+  }
 }
 
 async function loadWorkScheduleSettings() {
@@ -1649,11 +1810,13 @@ function renderEmployeesView() {
   const tableBody = document.getElementById('employeesTableBody');
   if (!tableBody) return;
 
-  const rows = dashboardState.filteredRows.length ? dashboardState.filteredRows : dashboardState.allRows;
+  const rows = dashboardState.employees.length
+    ? dashboardState.employees
+    : dashboardState.allRows.map((row) => row.employees).filter(Boolean);
   const employeeMap = new Map();
 
   rows.forEach((row) => {
-    const employeeData = row.employees || {};
+    const employeeData = row.employees || row;
     const employeeId = row.employee_id || employeeData.id || employeeData.nombre;
     const employeeName = employeeData.nombre || 'Empleado no encontrado';
     const department = employeeData.cargo || 'Sin departamento';
@@ -1665,6 +1828,7 @@ function renderEmployeesView() {
         department,
         salaryBase: parseFloat(employeeData.salario_base) || 0,
         jornada: parseFloat(employeeData.horas_jornada) || 8,
+        qrCodeHash: employeeData.qr_code_hash || '',
       });
     }
 
@@ -1672,6 +1836,7 @@ function renderEmployeesView() {
     employee.department = employee.department || department;
     employee.salaryBase = employee.salaryBase || parseFloat(employeeData.salario_base) || 0;
     employee.jornada = employee.jornada || parseFloat(employeeData.horas_jornada) || 8;
+    employee.qrCodeHash = employee.qrCodeHash || employeeData.qr_code_hash || '';
   });
 
   const employeeList = [...employeeMap.values()].sort((a, b) => a.name.localeCompare(b.name));
@@ -1683,11 +1848,17 @@ function renderEmployeesView() {
 
   tableBody.innerHTML = employeeList.map((employee) => `
     <tr>
-      <td>${employee.name}</td>
-      <td>${employee.department}</td>
+      <td>${escapeHtml(employee.name)}</td>
+      <td>${escapeHtml(employee.department)}</td>
       <td>${formatCurrency(employee.salaryBase)}</td>
       <td>${Number(employee.jornada.toFixed(1))}</td>
-      <td><button class="edit-employee-btn" data-employee-id="${employee.employeeId}" type="button">Editar</button></td>
+      <td>
+        <div class="employee-actions">
+          <button class="edit-employee-btn" data-employee-id="${employee.employeeId}" type="button">Editar</button>
+          <button class="edit-employee-btn" data-employee-action="view-qr" data-employee-id="${employee.employeeId}" type="button">Ver QR</button>
+          <button class="edit-employee-btn" data-employee-action="download-qr" data-employee-id="${employee.employeeId}" type="button">Descargar QR</button>
+        </div>
+      </td>
     </tr>
   `).join('');
 }
@@ -1858,7 +2029,7 @@ async function fetchEmployees() {
 
   const { data, error } = await supabase
     .from('employees')
-    .select('id, nombre, cargo, salario_base, horas_jornada, shift_id, tipo_horario');
+    .select('id, nombre, cargo, salario_base, horas_jornada, shift_id, tipo_horario, qr_code_hash');
 
   if (error) {
     throw error;
@@ -2034,6 +2205,15 @@ function formatCurrency(value, currencyCode = dashboardState.currency) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number(value || 0));
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function showToast(message) {
