@@ -523,11 +523,13 @@ function bindEmployeeModal() {
   saveButton.addEventListener('click', async () => {
     const supabase = window.AuraTechSupabase;
     const employeeId = document.getElementById('employeeEditId').value;
-    const salarioBase = Number(document.getElementById('employeeEditDailyPay').value || 0);
+    const salaryInput = document.getElementById('employeeEditDailyPay');
+    const salarioBase = parseFloat(salaryInput?.value?.trim() || '');
     const horasJornada = Number(document.getElementById('employeeEditWorkdayHours').value || 8);
     const shiftId = document.getElementById('employeeEditShiftId')?.value || null;
 
-    if (!supabase || !employeeId) {
+    if (!supabase || !employeeId || !Number.isFinite(salarioBase) || salarioBase < 0) {
+      showToast('Ingresa un salario base válido.');
       return;
     }
 
