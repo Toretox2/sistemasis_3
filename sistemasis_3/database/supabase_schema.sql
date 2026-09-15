@@ -16,19 +16,114 @@ CREATE TABLE IF NOT EXISTS public.employees (
 
 ALTER TABLE public.employees
     ADD COLUMN IF NOT EXISTS pago_por_dia NUMERIC(12,2) NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS horas_jornada NUMERIC(5,2) NOT NULL DEFAULT 8;
+    ADD COLUMN IF NOT EXISTS horas_jornada NUMERIC(5,2) NOT NULL DEFAULT 8,
+    ADD COLUMN IF NOT EXISTS qr_dynamic_token TEXT,
+    ADD COLUMN IF NOT EXISTS qr_token_expires_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_employees_qr_dynamic_token
+    ON public.employees(qr_dynamic_token);
+
+CREATE OR REPLACE FUNCTION public.rotate_employee_qr_token(target_employee_id UUID)
+RETURNS TABLE (qr_dynamic_token TEXT, qr_token_expires_at TIMESTAMPTZ)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    next_token TEXT;
+BEGIN
+    LOOP
+        next_token := LPAD(FLOOR(RANDOM() * 1000000000)::BIGINT::TEXT, 9, '0');
+        EXIT WHEN NOT EXISTS (
+            SELECT 1
+            FROM public.employees
+            WHERE public.employees.qr_dynamic_token = next_token
+        );
+    END LOOP;
+
+    RETURN QUERY
+    UPDATE public.employees
+    SET qr_dynamic_token = next_token,
+        qr_token_expires_at = NOW() + INTERVAL '60 seconds'
+    WHERE id = target_employee_id
+    RETURNING public.employees.qr_dynamic_token, public.employees.qr_token_expires_at;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.validate_qr_token(scanned_token TEXT)
+RETURNS SETOF public.employees
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT *
+    FROM public.employees
+    WHERE qr_dynamic_token = scanned_token
+      AND qr_token_expires_at > NOW();
+$$;
 
 CREATE TABLE IF NOT EXISTS public.attendance_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
-    fecha DATE NOT NULL,
-    hora_entrada TIME,
+    fecha DATE NOT NULL DEFAULT CURRENT_DATE,
+    hora_entrada TIME NOT NULL DEFAULT LOCALTIME,
     hora_salida TIME,
     horas_trabajadas NUMERIC(5,2) DEFAULT 0,
     horas_extra NUMERIC(5,2) DEFAULT 0,
     estado TEXT NOT NULL CHECK (estado IN ('presente', 'falta', 'retardo')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.attendance_logs
+    ALTER COLUMN fecha SET DEFAULT CURRENT_DATE,
+    ALTER COLUMN hora_entrada SET DEFAULT LOCALTIME;
+
+CREATE OR REPLACE FUNCTION public.set_attendance_server_times()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        NEW.fecha := CURRENT_DATE;
+        NEW.hora_entrada := LOCALTIME;
+        NEW.estado := CASE
+            WHEN LOCALTIME > TIME '08:30:00' THEN 'retardo'
+            ELSE 'presente'
+        END;
+    ELSIF TG_OP = 'UPDATE' AND OLD.hora_salida IS NULL AND NEW.hora_salida IS NULL THEN
+        NEW.hora_salida := LOCALTIME;
+        NEW.horas_trabajadas := ROUND(
+            (EXTRACT(EPOCH FROM (NEW.hora_salida - OLD.hora_entrada)) / 3600)::NUMERIC,
+            2
+        );
+        NEW.horas_extra := GREATEST(NEW.horas_trabajadas - 8, 0);
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS attendance_logs_server_times ON public.attendance_logs;
+CREATE TRIGGER attendance_logs_server_times
+    BEFORE INSERT OR UPDATE ON public.attendance_logs
+    FOR EACH ROW
+    EXECUTE FUNCTION public.set_attendance_server_times();
+
+CREATE OR REPLACE FUNCTION public.get_today_attendance(target_employee_id UUID)
+RETURNS SETOF public.attendance_logs
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+        SELECT *
+        FROM public.attendance_logs
+        WHERE employee_id = target_employee_id
+            AND fecha = CURRENT_DATE
+        ORDER BY created_at DESC
+        LIMIT 1;
+$$;
 
 DO $$
 BEGIN

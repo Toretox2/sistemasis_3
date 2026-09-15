@@ -660,14 +660,36 @@ async function generateUniqueQrCodeHash(supabase) {
   return code;
 }
 
+async function rotateEmployeeQrToken(supabase, employee) {
+  const { data, error } = await supabase.rpc('rotate_employee_qr_token', {
+    target_employee_id: employee.id,
+  });
+
+  if (error) throw error;
+
+  const rotatedToken = data?.[0];
+  if (!rotatedToken?.qr_dynamic_token) {
+    throw new Error('No se pudo generar un token QR temporal.');
+  }
+
+  employee.qr_dynamic_token = rotatedToken.qr_dynamic_token;
+  employee.qr_token_expires_at = rotatedToken.qr_token_expires_at;
+  return rotatedToken.qr_dynamic_token;
+}
+
 function bindEmployeeQrModal() {
   const modal = document.getElementById('employeeQrModal');
   const closeButton = document.getElementById('closeEmployeeQr');
   const downloadButton = document.getElementById('downloadEmployeeQr');
+  let qrRotationTimer = null;
 
   if (!modal || !closeButton || !downloadButton) return;
 
   const closeModal = () => {
+    if (qrRotationTimer) {
+      clearInterval(qrRotationTimer);
+      qrRotationTimer = null;
+    }
     modal.classList.remove('is-open');
     modal.setAttribute('aria-hidden', 'true');
   };
@@ -709,30 +731,46 @@ function bindEmployeeQrModal() {
       return;
     }
 
-    const qrCodeHash = employee?.qr_code_hash;
-    if (!employee || !qrCodeHash) {
-      showToast('Este empleado no tiene un token QR disponible.');
+    if (!employee) {
+      showToast('No se encontró el empleado seleccionado.');
       return;
     }
 
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCodeHash)}`;
-    const safeName = employee.nombre.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'Empleado';
-
     if (button.dataset.employeeAction === 'view-qr') {
+      await openQrModal(employee);
+      return;
+    }
+
+    const qrCode = await rotateEmployeeQrToken(window.AuraTechSupabase, employee);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode)}`;
+    const safeName = employee.nombre.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'Empleado';
+    await downloadQrImage(qrUrl, `QR_${safeName}.png`);
+  });
+
+  async function openQrModal(employee) {
+    const supabase = window.AuraTechSupabase;
+    const renderQr = async () => {
+      const qrCode = await rotateEmployeeQrToken(supabase, employee);
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode)}`;
+      const safeName = employee.nombre.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'Empleado';
+
       document.getElementById('employeeQrTitle').textContent = `QR de ${employee.nombre}`;
       document.getElementById('employeeQrContent').innerHTML = `
-        <img src="${qrUrl}" alt="Código QR de ${escapeHtml(employee.nombre)}" width="250" height="250" />
-        <p>Código: <strong>${escapeHtml(qrCodeHash)}</strong></p>
+        <img src="${qrUrl}" alt="Código QR temporal de ${escapeHtml(employee.nombre)}" width="250" height="250" />
+        <p>Válido durante 60 segundos.</p>
       `;
       downloadButton.dataset.qrUrl = qrUrl;
       downloadButton.dataset.fileName = `QR_${safeName}.png`;
-      modal.classList.add('is-open');
-      modal.setAttribute('aria-hidden', 'false');
-      return;
-    }
+    };
 
-    await downloadQrImage(qrUrl, `QR_${safeName}.png`);
-  });
+    if (qrRotationTimer) clearInterval(qrRotationTimer);
+    await renderQr();
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    qrRotationTimer = setInterval(() => {
+      renderQr().catch((error) => console.error('Error al rotar el QR:', error));
+    }, 60000);
+  }
 
   downloadButton.addEventListener('click', async () => {
     if (downloadButton.dataset.qrUrl) {
@@ -2057,7 +2095,7 @@ async function fetchEmployees() {
 
   const { data, error } = await supabase
     .from('employees')
-    .select('id, nombre, cargo, salario_base, horas_jornada, shift_id, tipo_horario, qr_code_hash');
+    .select('id, nombre, cargo, salario_base, horas_jornada, shift_id, tipo_horario, qr_code_hash, qr_dynamic_token, qr_token_expires_at');
 
   if (error) {
     throw error;

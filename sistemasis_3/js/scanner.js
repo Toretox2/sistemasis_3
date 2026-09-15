@@ -121,29 +121,27 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   async function getEmployeeByQrCode(qrCode) {
-    const { data, error } = await supabase
-      .from('employees')
-      .select('*')
-      .eq('qr_code_hash', qrCode)
-      .single();
+    const { data, error } = await supabase.rpc('validate_qr_token', {
+      scanned_token: qrCode,
+    });
 
     if (error) {
       throw error;
     }
 
-    return data;
+    if (!data || !data.length) {
+      const expiredError = new Error('QR expirado o inválido');
+      expiredError.code = 'QR_EXPIRED';
+      throw expiredError;
+    }
+
+    return data[0];
   }
 
   async function getTodayAttendance(employeeId) {
-    const today = formatLocalDate(localDateTime());
-
-    const { data, error } = await supabase
-      .from('attendance_logs')
-      .select('*')
-      .eq('employee_id', employeeId)
-      .eq('fecha', today)
-      .order('created_at', { ascending: false })
-      .limit(1);
+    const { data, error } = await supabase.rpc('get_today_attendance', {
+      target_employee_id: employeeId,
+    });
 
     if (error) {
       throw error;
@@ -153,31 +151,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function registerScan(employee) {
-    const now = localDateTime();
-    const fecha = formatLocalDate(now);
-    const horaActual = formatLocalTime(now);
     const currentLog = await getTodayAttendance(employee.id);
 
     if (!currentLog) {
-      const { error } = await supabase.from('attendance_logs').insert([
+      const { data, error } = await supabase.from('attendance_logs').insert([
         {
           employee_id: employee.id,
-          fecha,
-          hora_entrada: horaActual,
-          hora_salida: null,
           horas_trabajadas: 0,
           horas_extra: 0,
-          estado: determineShiftState(horaActual),
+          estado: 'presente',
         },
-      ]);
+      ]).select('fecha, hora_entrada').single();
 
       if (error) throw error;
 
       await showAttendanceAlert({
         employee,
         action: 'entry',
-        date: fecha,
-        time: horaActual,
+        date: data.fecha,
+        time: data.hora_entrada,
       });
 
       setStatus('Entrada registrada', 'success');
@@ -196,26 +188,23 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const totalHoursWorked = calculateWorkedHours(currentLog.hora_entrada, horaActual);
-    const extraHours = Math.max(totalHoursWorked - 8, 0);
-
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('attendance_logs')
       .update({
-        hora_salida: horaActual,
-        horas_trabajadas: Number(totalHoursWorked).toFixed(2),
-        horas_extra: Number(extraHours).toFixed(2),
-        estado: determineShiftState(currentLog.hora_entrada),
+        horas_trabajadas: currentLog.horas_trabajadas || 0,
+        horas_extra: currentLog.horas_extra || 0,
       })
-      .eq('id', currentLog.id);
+      .eq('id', currentLog.id)
+      .select('fecha, hora_salida')
+      .single();
 
     if (error) throw error;
 
     await showAttendanceAlert({
       employee,
       action: 'exit',
-      date: fecha,
-      time: horaActual,
+      date: data.fecha,
+      time: data.hora_salida,
     });
 
     setStatus('Salida registrada', 'success');
@@ -258,10 +247,13 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => scanner.resume(), 1500);
       } catch (error) {
         console.error('Error al procesar el QR:', error);
-        setStatus('Error en el registro', 'error');
+        const qrExpired = error?.code === 'QR_EXPIRED';
+        setStatus(qrExpired ? 'QR expirado o inválido' : 'Error en el registro', 'error');
         await Swal.fire({
-          title: 'No se pudo registrar la asistencia',
-          text: 'Revisa la conexión con Supabase o el QR escaneado.',
+          title: qrExpired ? 'QR expirado o inválido' : 'No se pudo registrar la asistencia',
+          text: qrExpired
+            ? 'Genera un código QR nuevo antes de registrar la asistencia.'
+            : 'Revisa la conexión con Supabase o el QR escaneado.',
           icon: 'error',
           confirmButtonColor: '#47A8BD',
           background: '#ffffff',
