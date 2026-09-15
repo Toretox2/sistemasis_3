@@ -1920,8 +1920,8 @@ function renderDashboard() {
           <td>${employeeName}</td>
           <td>${departmentName}</td>
           <td>${formatDate(row.fecha)}</td>
-          <td>${row.hora_entrada || '—'}</td>
-          <td>${row.hora_salida || '—'}</td>
+          <td>${formatAttendanceTime(row.hora_entrada)}</td>
+          <td>${formatAttendanceTime(row.hora_salida)}</td>
           <td>${Number(regularHours.toFixed(2))}</td>
           <td>${Number(extraHours.toFixed(2))}</td>
           <td>${absences}</td>
@@ -2380,6 +2380,15 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function formatAttendanceTime(value) {
+  if (!value) {
+    return '—';
+  }
+
+  // Supabase devuelve estas columnas TIME sin zona horaria; no se debe aplicar Date.
+  return String(value).slice(0, 8);
 }
 
 function showToast(message) {

@@ -27,8 +27,8 @@ ALTER TABLE public.employees
 CREATE TABLE IF NOT EXISTS public.attendance_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
-    fecha DATE NOT NULL DEFAULT CURRENT_DATE,
-    hora_entrada TIME NOT NULL DEFAULT LOCALTIME,
+    fecha DATE NOT NULL DEFAULT ((CURRENT_TIMESTAMP AT TIME ZONE 'America/Guatemala')::DATE),
+    hora_entrada TIME NOT NULL DEFAULT ((CURRENT_TIMESTAMP AT TIME ZONE 'America/Guatemala')::TIME),
     hora_salida TIME,
     horas_trabajadas NUMERIC(5,2) DEFAULT 0,
     horas_extra NUMERIC(5,2) DEFAULT 0,
@@ -37,8 +37,8 @@ CREATE TABLE IF NOT EXISTS public.attendance_logs (
 );
 
 ALTER TABLE public.attendance_logs
-    ALTER COLUMN fecha SET DEFAULT CURRENT_DATE,
-    ALTER COLUMN hora_entrada SET DEFAULT LOCALTIME;
+    ALTER COLUMN fecha SET DEFAULT ((CURRENT_TIMESTAMP AT TIME ZONE 'America/Guatemala')::DATE),
+    ALTER COLUMN hora_entrada SET DEFAULT ((CURRENT_TIMESTAMP AT TIME ZONE 'America/Guatemala')::TIME);
 
 CREATE OR REPLACE FUNCTION public.set_attendance_server_times()
 RETURNS TRIGGER
@@ -46,14 +46,14 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        NEW.fecha := CURRENT_DATE;
-        NEW.hora_entrada := LOCALTIME;
+        NEW.fecha := (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guatemala')::DATE;
+        NEW.hora_entrada := (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guatemala')::TIME;
         NEW.estado := CASE
-            WHEN LOCALTIME > TIME '08:30:00' THEN 'retardo'
+            WHEN (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guatemala')::TIME > TIME '08:30:00' THEN 'retardo'
             ELSE 'presente'
         END;
     ELSIF TG_OP = 'UPDATE' AND OLD.hora_salida IS NULL AND NEW.hora_salida IS NULL THEN
-        NEW.hora_salida := LOCALTIME;
+        NEW.hora_salida := (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guatemala')::TIME;
         NEW.horas_trabajadas := ROUND(
             (EXTRACT(EPOCH FROM (NEW.hora_salida - OLD.hora_entrada)) / 3600)::NUMERIC,
             2
@@ -81,7 +81,7 @@ AS $$
         SELECT *
         FROM public.attendance_logs
         WHERE employee_id = target_employee_id
-            AND fecha = CURRENT_DATE
+            AND fecha = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guatemala')::DATE
         ORDER BY created_at DESC
         LIMIT 1;
 $$;

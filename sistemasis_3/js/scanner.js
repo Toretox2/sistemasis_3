@@ -89,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const showAttendanceAlert = async ({ employee, action, date, time }) => {
     const actionLabel = action === 'entry' ? 'Entrada registrada' : 'Salida registrada';
+    const displayTime = time ? String(time).slice(0, 8) : '—';
 
     await Swal.fire({
       title: actionLabel,
@@ -97,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <p><strong>Empleado:</strong> ${employee.nombre}</p>
           <p><strong>Cargo:</strong> ${employee.cargo}</p>
           <p><strong>Fecha:</strong> ${date}</p>
-          <p><strong>Hora:</strong> ${time}</p>
+          <p><strong>Hora:</strong> ${displayTime}</p>
         </div>
       `,
       icon: 'success',
